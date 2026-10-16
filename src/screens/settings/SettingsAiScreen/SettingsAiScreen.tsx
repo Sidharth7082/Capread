@@ -68,8 +68,10 @@ const AiSettingsScreen = ({ navigation }: AiSettingsScreenProps) => {
             mode="outlined"
             label={getString('aiSettingsScreen.baseUrl')}
             value={baseUrlInput}
-            onChangeText={setBaseUrlInput}
-            onEndEditing={() => setAiSettings({ baseUrl: baseUrlInput.trim() })}
+            onChangeText={text => {
+              setBaseUrlInput(text);
+              setAiSettings({ baseUrl: text.trim() });
+            }}
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="url"
@@ -81,8 +83,10 @@ const AiSettingsScreen = ({ navigation }: AiSettingsScreenProps) => {
             mode="outlined"
             label={getString('aiSettingsScreen.apiKey')}
             value={apiKeyInput}
-            onChangeText={setApiKeyInput}
-            onEndEditing={() => setAiSettings({ apiKey: apiKeyInput.trim() })}
+            onChangeText={text => {
+              setApiKeyInput(text);
+              setAiSettings({ apiKey: text.trim() });
+            }}
             autoCapitalize="none"
             autoCorrect={false}
             secureTextEntry
@@ -94,13 +98,20 @@ const AiSettingsScreen = ({ navigation }: AiSettingsScreenProps) => {
             mode="outlined"
             label={getString('aiSettingsScreen.model')}
             value={modelInput}
-            onChangeText={setModelInput}
-            onEndEditing={() => setAiSettings({ model: modelInput.trim() })}
+            onChangeText={text => {
+              setModelInput(text);
+              setAiSettings({ model: text.trim() });
+            }}
             autoCapitalize="none"
             autoCorrect={false}
             underlineColor={theme.outline}
             theme={{ colors: { ...theme } }}
             style={styles.input}
+          />
+          <List.Item
+            title={getString('aiSettingsScreen.autoSave')}
+            description={getString('aiSettingsScreen.autoSaveDescription')}
+            theme={theme}
           />
           <List.Item
             title={getString('aiSettingsScreen.localOnly')}

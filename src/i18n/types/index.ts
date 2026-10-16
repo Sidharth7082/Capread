@@ -27,6 +27,8 @@ export interface StringMap {
   'aiAssistant.thinking': 'string';
   'aiAssistant.title': 'string';
   'aiSettingsScreen.apiKey': 'string';
+  'aiSettingsScreen.autoSave': 'string';
+  'aiSettingsScreen.autoSaveDescription': 'string';
   'aiSettingsScreen.baseUrl': 'string';
   'aiSettingsScreen.chapterAssistant': 'string';
   'aiSettingsScreen.chatMemory': 'string';

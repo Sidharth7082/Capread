@@ -28,6 +28,8 @@
   },
   "aiSettingsScreen": {
     "apiKey": "API key",
+    "autoSave": "Auto-save",
+    "autoSaveDescription": "Changes are saved as you type — there is no save button; just leave this screen when you are done.",
     "baseUrl": "API base URL",
     "chapterAssistant": "Chapter assistant",
     "chatMemory": "Chat memory",
