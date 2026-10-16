@@ -1,0 +1,79 @@
+import dayjs, { ConfigType } from 'dayjs';
+import calendar from 'dayjs/plugin/calendar';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
+
+import { getString, localization } from '@i18n/translations';
+
+dayjs.extend(calendar);
+dayjs.extend(localizedFormat);
+
+export type DateFormat =
+  | 'default'
+  | 'MM/DD/YY'
+  | 'DD/MM/YY'
+  | 'YYYY-MM-DD'
+  | 'DD MMM YYYY'
+  | 'MMM DD, YYYY';
+
+export const DATE_FORMATS: DateFormat[] = [
+  'default',
+  'MM/DD/YY',
+  'DD/MM/YY',
+  'YYYY-MM-DD',
+  'DD MMM YYYY',
+  'MMM DD, YYYY',
+];
+
+const DATE_FORMAT_NAMES: Record<Exclude<DateFormat, 'default'>, string> = {
+  'MM/DD/YY': 'MM/dd/yy',
+  'DD/MM/YY': 'dd/MM/yy',
+  'YYYY-MM-DD': 'yyyy-MM-dd',
+  'DD MMM YYYY': 'dd MMM yyyy',
+  'MMM DD, YYYY': 'MMM dd, yyyy',
+};
+
+const formatDefaultDate = (date: Date): string => {
+  try {
+    return new Intl.DateTimeFormat(localization, {
+      dateStyle: 'short',
+    }).format(date);
+  } catch {
+    return dayjs(date).format('L');
+  }
+};
+
+export const formatDate = (
+  value: ConfigType,
+  dateFormat: DateFormat = 'default',
+  relativeTimestamps = true,
+  now: ConfigType = dayjs(),
+): string => {
+  const date = dayjs(value);
+  if (!date.isValid()) {
+    return typeof value === 'string' ? value : '';
+  }
+
+  if (relativeTimestamps) {
+    const referenceDate = dayjs(now);
+    const dayDifference = date
+      .startOf('day')
+      .diff(referenceDate.startOf('day'), 'day');
+    if (dayDifference >= -6 && dayDifference < 7) {
+      return date.calendar(referenceDate);
+    }
+  }
+
+  return dateFormat === 'default'
+    ? formatDefaultDate(date.toDate())
+    : date.format(dateFormat);
+};
+
+export const getDateFormatLabel = (
+  dateFormat: DateFormat,
+  sampleDate: ConfigType = dayjs(),
+): string => {
+  const sample = formatDate(sampleDate, dateFormat, false);
+  return dateFormat === 'default'
+    ? getString('appearanceScreen.dateFormatDefault', { date: sample })
+    : `${DATE_FORMAT_NAMES[dateFormat]} (${sample})`;
+};

@@ -1,0 +1,541 @@
+import { ChapterOrderKey } from '@database/constants';
+import {
+  DisplayModes,
+  LibraryFilter,
+  LibrarySortOrder,
+} from '@screens/library/constants/constants';
+import { TtsEngine, TtsVoice } from '@modules/nitro-tts';
+import { useMMKVObject } from 'react-native-mmkv';
+import { useEffect, useMemo } from 'react';
+import { getMMKVObject } from '@utils/mmkv/mmkv';
+import type { DateFormat } from '@utils/dateFormat';
+import type {
+  AutomaticBackupInterval,
+  AutomaticLibraryUpdateInterval,
+} from '@services/backgroundTasks';
+
+export const APP_SETTINGS = 'APP_SETTINGS';
+
+/**
+ * Cooldown applied between sequential chapter downloads when no override
+ * is configured. Matches the historical hard-coded sleep so installs
+ * upgrading from earlier builds keep the same behaviour.
+ */
+export const DEFAULT_CHAPTER_DOWNLOAD_COOLDOWN_MS = 1000;
+
+/**
+ * Resolve the cooldown without subscribing to changes. Safe to call from
+ * background services and the headless task runner.
+ */
+export const getChapterDownloadCooldownMs = (): number => {
+  const settings = getMMKVObject<AppSettings>(APP_SETTINGS);
+  const ms = settings?.chapterDownloadCooldownMs;
+  return typeof ms === 'number' && Number.isFinite(ms) && ms >= 0
+    ? ms
+    : DEFAULT_CHAPTER_DOWNLOAD_COOLDOWN_MS;
+};
+export const BROWSE_SETTINGS = 'BROWSE_SETTINGS';
+export const LIBRARY_SETTINGS = 'LIBRARY_SETTINGS';
+export const CHAPTER_GENERAL_SETTINGS = 'CHAPTER_GENERAL_SETTINGS';
+export const CHAPTER_READER_SETTINGS = 'CHAPTER_READER_SETTINGS';
+export const AI_SETTINGS = 'AI_SETTINGS';
+
+export interface AppSettings {
+  /**
+   * General settings
+   */
+
+  incognitoMode: boolean;
+  disableHapticFeedback: boolean;
+
+  /**
+   * Appearence settings
+   */
+
+  showHistoryTab: boolean;
+  showUpdatesTab: boolean;
+  showLabelsInNav: boolean;
+  useFabForContinueReading: boolean;
+  disableLoadingAnimations: boolean;
+  dateFormat?: DateFormat;
+  relativeTimestamps?: boolean;
+
+  /**
+   * Library settings
+   */
+
+  downloadedOnlyMode: boolean;
+  useLibraryFAB: boolean;
+
+  /**
+   * Update settings
+   */
+
+  smartUpdateSkipCompleted: boolean;
+  smartUpdateSkipUnstarted: boolean;
+  smartUpdateSkipWithUnread: boolean;
+  automaticLibraryUpdateIntervalHours: AutomaticLibraryUpdateInterval;
+  automaticBackupIntervalHours?: AutomaticBackupInterval;
+  automaticBackupDirectoryUri?: string;
+  automaticBackupDirectoryName?: string;
+  lastAutomaticBackupAt?: number;
+  updateLibraryOnLaunch: boolean;
+  downloadNewChapters: boolean;
+  refreshNovelMetadata: boolean;
+
+  /**
+   * Download settings
+   */
+
+  /** Cooldown between sequential chapter downloads in milliseconds. */
+  chapterDownloadCooldownMs?: number;
+
+  /**
+   * Novel settings
+   */
+
+  hideBackdrop: boolean;
+  defaultChapterSort: ChapterOrderKey;
+
+  /**
+   * Time-tracking settings
+   */
+  /** Whether to actually enable time tracking */
+  timeTrackingEnabled: boolean;
+  /** The timeout after which to consider the user inactive and not track time */
+  inactivityTimeoutMs?: number;
+}
+
+export interface BrowseSettings {
+  showMyAnimeList: boolean;
+  showAniList: boolean;
+  globalSearchConcurrency?: number;
+}
+
+export interface AiSettings {
+  /** Enables AI-powered recap generation. */
+  enabled: boolean;
+  /** OpenAI-compatible API base URL, e.g. https://api.openai.com/v1 */
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+}
+
+export interface LibrarySettings {
+  /** User-selected category for newly added novels. */
+  defaultCategoryId?: number;
+  /** Prompt for categories whenever a novel is added to the library. */
+  promptForCategoryOnAdd?: boolean;
+  /** Last category viewed in the library. */
+  lastUsedCategoryId?: number;
+  globalUpdateExcludeCategoryIds?: number[];
+  globalUpdateIncludeCategoryIds?: number[];
+  sortOrder?: LibrarySortOrder;
+  filter?: LibraryFilter;
+  showDownloadBadges?: boolean;
+  showUnreadBadges?: boolean;
+  showContinueReadingButton?: boolean;
+  showNumberOfNovels?: boolean;
+  displayMode?: DisplayModes;
+  novelsPerRow?: number;
+  incognitoMode?: boolean;
+  downloadedOnlyMode?: boolean;
+}
+
+export interface GlobalUpdateCategoryFilters {
+  excludedCategoryIds: number[];
+  includedCategoryIds: number[];
+}
+
+export interface SmartUpdateFilters {
+  skipCompleted: boolean;
+  skipUnstarted: boolean;
+  skipWithUnread: boolean;
+}
+
+const normalizeCategoryIds = (categoryIds?: number[]): number[] =>
+  Array.from(
+    new Set(
+      (categoryIds ?? []).filter(
+        categoryId => Number.isInteger(categoryId) && categoryId > 0,
+      ),
+    ),
+  );
+
+export const getGlobalUpdateCategoryFilters =
+  (): GlobalUpdateCategoryFilters => {
+    const settings = getMMKVObject<LibrarySettings>(LIBRARY_SETTINGS);
+
+    return {
+      excludedCategoryIds: normalizeCategoryIds(
+        settings?.globalUpdateExcludeCategoryIds,
+      ),
+      includedCategoryIds: normalizeCategoryIds(
+        settings?.globalUpdateIncludeCategoryIds,
+      ),
+    };
+  };
+
+export const getLibraryDefaultCategoryId = (): number | undefined => {
+  const settings = getMMKVObject<LibrarySettings>(LIBRARY_SETTINGS);
+  const categoryId = settings?.defaultCategoryId;
+
+  return typeof categoryId === 'number' &&
+    Number.isInteger(categoryId) &&
+    categoryId > 2
+    ? categoryId
+    : undefined;
+};
+
+export interface ChapterGeneralSettings {
+  keepScreenOn: boolean;
+  fullScreenMode: boolean;
+  pageReader: boolean;
+  swipeGestures: boolean;
+  showScrollPercentage: boolean;
+  useVolumeButtons: boolean;
+  volumeButtonsOffset: number | null;
+  showBatteryAndTime: boolean;
+  autoScroll: boolean;
+  autoScrollInterval: number;
+  autoScrollOffset: number | null;
+  verticalSeekbar: boolean;
+  removeExtraParagraphSpacing: boolean;
+  bionicReading: boolean;
+  tapToScroll: boolean;
+  TTSEnable: boolean;
+}
+
+export interface ReaderTheme {
+  backgroundColor: string;
+  textColor: string;
+}
+
+export interface ChapterReaderSettings {
+  theme: string;
+  textColor: string;
+  textSize: number;
+  textAlign: string;
+  padding: number;
+  fontFamily: string;
+  lineHeight: number;
+  customCSS: string;
+  customJS: string;
+  customThemes: ReaderTheme[];
+  tts?: {
+    /** Android only: the selected engine, or the system default when absent. */
+    engine?: TtsEngine;
+    voice?: TtsVoice;
+    rate?: number;
+    pitch?: number;
+    autoPageAdvance?: boolean;
+    scrollToTop?: boolean;
+  };
+  epubLocation: string;
+  epubUseAppTheme: boolean;
+  epubUseCustomCSS: boolean;
+  epubUseCustomJS: boolean;
+  epubIncludeChapterNumber: boolean;
+  /**
+   * Custom code
+   */
+  replaceText: Record<string, string>;
+  removeText: string[];
+  codeSnippetsCSS: CodeSnippet[];
+  codeSnippetsJS: CodeSnippet[];
+}
+
+type CodeSnippet = {
+  name: string;
+  code: string;
+  lang: 'js' | 'css';
+  active: boolean;
+};
+
+const initialAppSettings: AppSettings = {
+  /**
+   * General settings
+   */
+
+  incognitoMode: false,
+  disableHapticFeedback: false,
+
+  /**
+   * Appearence settings
+   */
+
+  showHistoryTab: true,
+  showUpdatesTab: true,
+  showLabelsInNav: true,
+  useFabForContinueReading: false,
+  disableLoadingAnimations: false,
+  dateFormat: 'default',
+  relativeTimestamps: true,
+
+  /**
+   * Library settings
+   */
+
+  downloadedOnlyMode: false,
+  useLibraryFAB: false,
+
+  /**
+   * Update settings
+   */
+
+  smartUpdateSkipCompleted: false,
+  smartUpdateSkipUnstarted: false,
+  smartUpdateSkipWithUnread: false,
+  automaticLibraryUpdateIntervalHours: 0,
+  automaticBackupIntervalHours: 0,
+  updateLibraryOnLaunch: false,
+  downloadNewChapters: false,
+  refreshNovelMetadata: false,
+
+  /**
+   * Novel settings
+   */
+
+  hideBackdrop: false,
+  defaultChapterSort: 'positionAsc',
+
+  /**
+   * Time-tracking settings
+   */
+  timeTrackingEnabled: true,
+  inactivityTimeoutMs: 5 * 60 * 1000, // 5 minutes
+};
+
+const initialBrowseSettings: BrowseSettings = {
+  showMyAnimeList: true,
+  showAniList: true,
+  globalSearchConcurrency: 3,
+};
+
+export const initialChapterGeneralSettings: ChapterGeneralSettings = {
+  keepScreenOn: true,
+  fullScreenMode: true,
+  pageReader: false,
+  swipeGestures: false,
+  showScrollPercentage: true,
+  useVolumeButtons: false,
+  volumeButtonsOffset: null,
+  showBatteryAndTime: false,
+  autoScroll: false,
+  autoScrollInterval: 10,
+  autoScrollOffset: null,
+  verticalSeekbar: true,
+  removeExtraParagraphSpacing: false,
+  bionicReading: false,
+  tapToScroll: false,
+  TTSEnable: true,
+};
+
+export const initialChapterReaderSettings: ChapterReaderSettings = {
+  theme: '#292832',
+  textColor: '#CCCCCC',
+  textSize: 16,
+  textAlign: 'left',
+  padding: 16,
+  fontFamily: '',
+  lineHeight: 1.5,
+  customCSS: '',
+  customJS: '',
+  customThemes: [],
+  tts: {
+    rate: 1,
+    pitch: 1,
+    autoPageAdvance: false,
+    scrollToTop: true,
+  },
+  epubLocation: '',
+  epubUseAppTheme: false,
+  epubUseCustomCSS: false,
+  epubUseCustomJS: false,
+  epubIncludeChapterNumber: false,
+  /**
+   * Custom code
+   */
+  replaceText: {},
+  removeText: [],
+  codeSnippetsCSS: [],
+  codeSnippetsJS: [],
+};
+
+export const useAppSettings = () => {
+  const [appSettings = initialAppSettings, setSettings] =
+    useMMKVObject<AppSettings>(APP_SETTINGS);
+
+  const setAppSettings = (values: Partial<AppSettings>) =>
+    setSettings({ ...appSettings, ...values });
+
+  return {
+    ...appSettings,
+    setAppSettings,
+  };
+};
+
+export const useBrowseSettings = () => {
+  const [browseSettings = initialBrowseSettings, setSettings] =
+    useMMKVObject<BrowseSettings>(BROWSE_SETTINGS);
+
+  const setBrowseSettings = (values: Partial<BrowseSettings>) =>
+    setSettings({ ...browseSettings, ...values });
+
+  return {
+    ...browseSettings,
+    setBrowseSettings,
+  };
+};
+
+const initialAiSettings: AiSettings = {
+  enabled: false,
+  baseUrl: 'https://api.openai.com/v1',
+  apiKey: '',
+  model: '',
+};
+
+export const useAiSettings = () => {
+  const [aiSettings = initialAiSettings, setSettings] =
+    useMMKVObject<AiSettings>(AI_SETTINGS);
+
+  const setAiSettings = (values: Partial<AiSettings>) =>
+    setSettings({ ...aiSettings, ...values });
+
+  return {
+    ...aiSettings,
+    setAiSettings,
+  };
+};
+
+const defaultLibrarySettings: LibrarySettings = {
+  promptForCategoryOnAdd: false,
+  showNumberOfNovels: false,
+  downloadedOnlyMode: false,
+  incognitoMode: false,
+  displayMode: DisplayModes.Comfortable,
+  showDownloadBadges: true,
+  showUnreadBadges: true,
+  showContinueReadingButton: false,
+  novelsPerRow: 3,
+  sortOrder: LibrarySortOrder.DateAdded_DESC,
+};
+
+export const useLibrarySettings = () => {
+  const [librarySettings, setSettings] =
+    useMMKVObject<LibrarySettings>(LIBRARY_SETTINGS);
+
+  const setLibrarySettings = (value: Partial<LibrarySettings>) =>
+    setSettings({ ...librarySettings, ...value });
+
+  return {
+    ...{ ...defaultLibrarySettings, ...librarySettings },
+    setLibrarySettings,
+  };
+};
+
+export const useChapterGeneralSettings = () => {
+  const [chapterGeneralSettings = initialChapterGeneralSettings, setSettings] =
+    useMMKVObject<ChapterGeneralSettings>(CHAPTER_GENERAL_SETTINGS);
+
+  const setChapterGeneralSettings = (values: Partial<ChapterGeneralSettings>) =>
+    setSettings({ ...chapterGeneralSettings, ...values });
+
+  return {
+    ...chapterGeneralSettings,
+    setChapterGeneralSettings,
+  };
+};
+
+export const useChapterReaderSettings = () => {
+  const [storedSettings = initialChapterReaderSettings, setSettings] =
+    useMMKVObject<ChapterReaderSettings>(CHAPTER_READER_SETTINGS);
+
+  // Ensure TTS settings have proper defaults (migration for existing users).
+  // Memoized because several reader components read these settings, and a new
+  // object on every render invalidates everything derived from them.
+  const chapterReaderSettings = useMemo(
+    () => ({
+      ...initialChapterReaderSettings,
+      ...storedSettings,
+      tts: {
+        ...initialChapterReaderSettings.tts,
+        ...storedSettings.tts,
+        // Explicitly ensure these defaults if undefined
+        autoPageAdvance: storedSettings.tts?.autoPageAdvance ?? false,
+        scrollToTop: storedSettings.tts?.scrollToTop ?? true,
+        rate: storedSettings.tts?.rate ?? 1,
+        pitch: storedSettings.tts?.pitch ?? 1,
+      },
+    }),
+    [storedSettings],
+  );
+
+  const setChapterReaderSettings = (values: Partial<ChapterReaderSettings>) =>
+    setSettings({ ...chapterReaderSettings, ...values });
+
+  const saveCustomReaderTheme = (theme: ReaderTheme) =>
+    setSettings({
+      ...chapterReaderSettings,
+      customThemes: [theme, ...chapterReaderSettings.customThemes],
+    });
+
+  const deleteCustomReaderTheme = (theme: ReaderTheme) =>
+    setSettings({
+      ...chapterReaderSettings,
+      customThemes: chapterReaderSettings.customThemes.filter(
+        v =>
+          !(
+            v.backgroundColor === theme.backgroundColor &&
+            v.textColor === theme.textColor
+          ),
+      ),
+    });
+
+  // Migrate old customCSS/customJS to new CodeSnippet arrays
+  useEffect(() => {
+    const css = storedSettings.customCSS?.trim();
+    const js = storedSettings.customJS?.trim();
+    if (css || js) {
+      const migratedCSS: CodeSnippet[] = css
+        ? [
+            {
+              name: 'Legacy CSS',
+              code: css,
+              lang: 'css' as const,
+              active: storedSettings.epubUseCustomCSS,
+            },
+          ]
+        : [];
+      const migratedJS: CodeSnippet[] = js
+        ? [
+            {
+              name: 'Legacy JS',
+              code: js,
+              lang: 'js' as const,
+              active: storedSettings.epubUseCustomJS,
+            },
+          ]
+        : [];
+      setChapterReaderSettings({
+        customCSS: '',
+        customJS: '',
+        codeSnippetsCSS: [
+          ...migratedCSS,
+          ...(storedSettings.codeSnippetsCSS ?? []),
+        ],
+        codeSnippetsJS: [
+          ...migratedJS,
+          ...(storedSettings.codeSnippetsJS ?? []),
+        ],
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return {
+    ...chapterReaderSettings,
+    setChapterReaderSettings,
+    saveCustomReaderTheme,
+    deleteCustomReaderTheme,
+  };
+};

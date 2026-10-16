@@ -1,0 +1,208 @@
+name: Build Preview
+
+on:
+  schedule:
+    - cron: '30 0 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+
+env:
+  CI: 'true'
+  EXPO_NO_TELEMETRY: '1'
+  NODE_ENV: 'production'
+
+jobs:
+  check-preview:
+    name: Check Preview
+    runs-on: ubuntu-24.04
+    outputs:
+      should-build: ${{ steps.preview.outputs.should-build }}
+
+    steps:
+      - name: Check For Existing Preview
+        id: preview
+        uses: actions/github-script@v8
+        with:
+          script: |
+            if (context.eventName === 'workflow_dispatch') {
+              core.notice('Manual dispatch requested; building a new preview.')
+              core.setOutput('should-build', 'true')
+              return
+            }
+
+            const shortSha = context.sha.slice(0, 8)
+            const artifactName = `Capread-${shortSha}`
+            const { data: { artifacts } } = await github.rest.actions.listArtifactsForRepo(
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: artifactName,
+                per_page: 100,
+              },
+            )
+            const previewExists = artifacts.some(
+              artifact =>
+                !artifact.expired &&
+                artifact.workflow_run?.head_sha === context.sha,
+            )
+
+            core.notice(
+              previewExists
+                ? `A preview artifact already exists for ${shortSha}.`
+                : `No preview artifact exists for ${shortSha}; starting a build.`,
+            )
+            core.setOutput('should-build', String(!previewExists))
+
+  build-android:
+    name: APK
+    needs: check-preview
+    if: needs.check-preview.outputs.should-build == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set Up pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set Up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Set Up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Configure Release Environment
+        env:
+          MYANIMELIST_CLIENT_ID: ${{ vars.MYANIMELIST_CLIENT_ID }}
+          ANILIST_CLIENT_ID: ${{ vars.ANILIST_CLIENT_ID }}
+        run: |
+          pnpm generate:env:release \
+            --build-type "GitHub Action" \
+            --node-env "production"
+
+      - name: Generate Native Android Project
+        run: |
+          pnpm exec expo prebuild \
+            --platform android \
+            --clean \
+            --no-install \
+            --non-interactive
+
+      - name: Configure Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: enhanced
+          cache-read-only: >-
+            ${{ github.ref_name != github.event.repository.default_branch }}
+          cache-cleanup: on-success
+          add-job-summary: always
+
+      - name: Generate Preview Metadata
+        run: |
+          short_sha="${GITHUB_SHA::8}"
+          base_version_name="$(node --print "require('./app.json').expo.version")"
+          base_version_code="$(node --print "require('./app.json').expo.android.versionCode")"
+
+          echo "PRERELEASE_VERSION_CODE=$((base_version_code + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+          echo "PRERELEASE_VERSION_NAME=${base_version_name}-pre.r${GITHUB_RUN_NUMBER}.${short_sha}" >> "$GITHUB_ENV"
+          echo "PRERELEASE_ARTIFACT_NAME=Capread-${short_sha}" >> "$GITHUB_ENV"
+          echo "PRERELEASE_APK_NAME=Capread-r${GITHUB_RUN_NUMBER}-${short_sha}.apk" >> "$GITHUB_ENV"
+
+      - name: Build Preview APK
+        working-directory: android
+        run: |
+          mkdir -p app/build/intermediates/sourcemaps/react/preRelease
+
+          ./gradlew :app:assemblePreRelease \
+            --build-cache \
+            --parallel \
+            -PpreReleaseVersionCode="$PRERELEASE_VERSION_CODE" \
+            -PpreReleaseVersionName="$PRERELEASE_VERSION_NAME" \
+            --stacktrace
+
+          mv \
+            app/build/outputs/apk/preRelease/app-preRelease.apk \
+            "app/build/outputs/apk/preRelease/$PRERELEASE_APK_NAME"
+
+      - name: Upload Preview Sourcemap
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PRERELEASE_ARTIFACT_NAME }}-sourcemap
+          path: android/app/build/generated/sourcemaps/react/preRelease/index.android.bundle.map
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Upload Preview APK
+        id: upload-nightly
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PRERELEASE_ARTIFACT_NAME }}
+          path: android/app/build/outputs/apk/preRelease/${{ env.PRERELEASE_APK_NAME }}
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Check Discord Notification
+        id: discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_NIGHTLY_WEBHOOK }}
+        run: |
+          if [ -n "$DISCORD_WEBHOOK_URL" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Notify Discord
+        if: steps.discord.outputs.configured == 'true'
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_NIGHTLY_WEBHOOK }}
+          ARTIFACT_URL: ${{ steps.upload-nightly.outputs.artifact-url }}
+        run: |
+          short_sha="${GITHUB_SHA::8}"
+          message="[${GITHUB_REPOSITORY}] New nightly build published: \`${short_sha}\`"
+
+          payload=$(jq -n \
+            --arg title "$message" \
+            --arg url "$ARTIFACT_URL" \
+            '{
+              username: "GitHub",
+              avatar_url: "https://github.com/github.png",
+              embeds: [{
+                author: {
+                  name: "github-actions[bot]",
+                  icon_url: "https://github.com/github.png"
+                },
+                title: $title,
+                url: $url,
+                color: 3092790
+              }]
+            }')
+
+          curl --fail-with-body \
+            --request POST \
+            --header "Content-Type: application/json" \
+            --data "$payload" \
+            "$DISCORD_WEBHOOK_URL"

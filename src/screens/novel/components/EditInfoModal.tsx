@@ -1,0 +1,347 @@
+import React, { useMemo, useState } from 'react';
+import {
+  FlatList,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+
+import MaterialCommunityIcons from '@react-native-vector-icons/material-design-icons';
+import { TextInput } from 'react-native-paper';
+import { updateNovelInfo } from '@database/queries/NovelQueries';
+
+import { getString } from '@i18n/translations';
+import { Dialog } from '@components';
+import { ThemeColors } from '@theme/types';
+import { NovelInfo } from '@database/types';
+import { NovelStatus } from '@plugins/types';
+import { translateNovelStatus } from '@utils/translateEnum';
+import { showToast } from '@utils/showToast';
+import { parseGenres } from '../utils/genres';
+
+interface EditInfoModalProps {
+  theme: ThemeColors;
+  hideModal: () => void;
+  modalVisible: boolean;
+  novel: NovelInfo;
+  setNovel: (novel: NovelInfo | undefined) => void;
+}
+
+// --- Dynamic style helpers ---
+const getStatusLabelColor = (theme: ThemeColors) => ({
+  color: theme.onSurfaceVariant,
+});
+const getScrollViewStyle = () => styles.statusScrollView;
+const getStatusChipContainer = () => styles.statusChipContainer;
+const getStatusChipPressable = (selected: boolean, theme: ThemeColors) => ({
+  backgroundColor: selected ? theme.rippleColor : 'transparent',
+});
+const getStatusChipText = (selected: boolean, theme: ThemeColors) => ({
+  color: selected ? theme.primary : theme.onSurfaceVariant,
+});
+const getGenreListStyle = () => styles.genreList;
+
+// --- Main Component ---
+type EditInfoModalContentProps = Omit<EditInfoModalProps, 'modalVisible'>;
+
+const EditInfoModalContent = ({
+  theme,
+  hideModal,
+  novel,
+  setNovel,
+}: EditInfoModalContentProps) => {
+  const [novelInfo, setNovelInfo] = useState(novel);
+  const [saving, setSaving] = useState(false);
+
+  const [newGenre, setNewGenre] = useState('');
+  const genres = useMemo(
+    () => parseGenres(novelInfo.genres),
+    [novelInfo.genres],
+  );
+
+  const removeTag = (t: string) => {
+    setNovelInfo(current => ({
+      ...current,
+      genres: parseGenres(current.genres)
+        .filter(item => item !== t)
+        .join(','),
+    }));
+  };
+
+  const status = Object.values(NovelStatus);
+  const persistNovelInfo = async (nextNovel: NovelInfo, dismiss: boolean) => {
+    setSaving(true);
+    try {
+      await updateNovelInfo(nextNovel);
+      setNovel(nextNovel);
+      if (dismiss) {
+        hideModal();
+      }
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : String(error));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog.Root visible onDismiss={() => !saving && hideModal()}>
+      <Dialog.Title>{getString('novelScreen.edit.info')}</Dialog.Title>
+      <Dialog.ScrollArea>
+        <ScrollView
+          contentContainerStyle={styles.formContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.statusRow}>
+            <Text style={getStatusLabelColor(theme)}>
+              {getString('novelScreen.edit.status')}
+            </Text>
+            <ScrollView
+              style={getScrollViewStyle()}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+            >
+              {status.map((item, index) => (
+                <View
+                  style={getStatusChipContainer()}
+                  key={'novelInfo' + index}
+                >
+                  <Pressable
+                    style={[
+                      styles.statusChipPressable,
+                      getStatusChipPressable(novelInfo.status === item, theme),
+                    ]}
+                    android_ripple={{
+                      color: theme.rippleColor,
+                    }}
+                    onPress={() =>
+                      setNovelInfo(current => ({ ...current, status: item }))
+                    }
+                  >
+                    <Text
+                      style={getStatusChipText(
+                        novelInfo.status === item,
+                        theme,
+                      )}
+                    >
+                      {translateNovelStatus(item)}
+                    </Text>
+                  </Pressable>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+          <TextInput
+            value={novelInfo.name}
+            placeholder={getString('novelScreen.edit.title', {
+              title: novel.name,
+            })}
+            numberOfLines={1}
+            mode="outlined"
+            theme={{ colors: { ...theme } }}
+            onChangeText={name =>
+              setNovelInfo(current => ({ ...current, name }))
+            }
+            dense
+            style={styles.inputWrapper}
+          />
+          <TextInput
+            value={novelInfo.author ?? undefined}
+            placeholder={getString('novelScreen.edit.author', {
+              author: novel.author,
+            })}
+            numberOfLines={1}
+            mode="outlined"
+            theme={{ colors: { ...theme } }}
+            onChangeText={author =>
+              setNovelInfo(current => ({ ...current, author }))
+            }
+            dense
+            style={styles.inputWrapper}
+          />
+          <TextInput
+            value={novelInfo.artist ?? undefined}
+            placeholder={'Artist: ' + novel.artist}
+            numberOfLines={1}
+            mode="outlined"
+            theme={{ colors: { ...theme } }}
+            onChangeText={artist =>
+              setNovelInfo(current => ({ ...current, artist }))
+            }
+            dense
+            style={styles.inputWrapper}
+          />
+          <TextInput
+            value={novelInfo.summary ?? undefined}
+            placeholder={getString('novelScreen.edit.summary', {
+              summary: novel.summary?.substring(0, 16),
+            })}
+            numberOfLines={1}
+            mode="outlined"
+            onChangeText={summary =>
+              setNovelInfo(current => ({ ...current, summary }))
+            }
+            theme={{ colors: { ...theme } }}
+            dense
+            style={styles.inputWrapper}
+          />
+
+          <TextInput
+            value={newGenre}
+            placeholder={getString('novelScreen.edit.addTag')}
+            numberOfLines={1}
+            mode="outlined"
+            onChangeText={text => setNewGenre(text)}
+            onSubmitEditing={() => {
+              const newGenreTrimmed = newGenre.trim();
+
+              if (newGenreTrimmed === '') {
+                return;
+              }
+
+              setNovelInfo(prevVal => ({
+                ...prevVal,
+                genres: [...parseGenres(prevVal.genres), newGenreTrimmed].join(
+                  ',',
+                ),
+              }));
+              setNewGenre('');
+            }}
+            theme={{ colors: { ...theme } }}
+            dense
+            style={styles.inputWrapper}
+          />
+
+          {genres.length > 0 ? (
+            <FlatList
+              style={getGenreListStyle()}
+              horizontal
+              data={genres}
+              keyExtractor={(_, index) => 'novelTag' + index}
+              renderItem={({ item }) => (
+                <GenreChip theme={theme} onPress={() => removeTag(item)}>
+                  {item}
+                </GenreChip>
+              )}
+              showsHorizontalScrollIndicator={false}
+            />
+          ) : null}
+        </ScrollView>
+      </Dialog.ScrollArea>
+      <Dialog.Actions>
+        <Dialog.Action
+          title={getString('common.reset')}
+          disabled={saving}
+          onPress={() => {
+            setNovelInfo(novel);
+            void persistNovelInfo(novel, false);
+          }}
+        />
+        <Dialog.Action
+          title={getString('common.cancel')}
+          disabled={saving}
+          onPress={hideModal}
+        />
+        <Dialog.Action
+          title={getString('common.save')}
+          disabled={saving}
+          onPress={() => {
+            void persistNovelInfo(novelInfo, true);
+          }}
+        />
+      </Dialog.Actions>
+    </Dialog.Root>
+  );
+};
+
+const EditInfoModal = ({ modalVisible, ...props }: EditInfoModalProps) =>
+  modalVisible ? <EditInfoModalContent {...props} /> : null;
+
+export default EditInfoModal;
+
+// --- GenreChip with split styles ---
+const getGenreChipContainer = (theme: ThemeColors) => ({
+  backgroundColor: theme.secondaryContainer,
+});
+const getGenreChipText = (theme: ThemeColors) => ({
+  color: theme.onSecondaryContainer,
+});
+const getGenreChipIcon = (theme: ThemeColors) => ({
+  color: theme.onSecondaryContainer,
+});
+
+const GenreChip = ({
+  children,
+  theme,
+  onPress,
+}: {
+  children: React.ReactNode;
+  theme: ThemeColors;
+  onPress: () => void;
+}) => (
+  <View style={[styles.genreChipContainer, getGenreChipContainer(theme)]}>
+    <Text style={[styles.genreChipText, getGenreChipText(theme)]}>
+      {children}
+    </Text>
+    <MaterialCommunityIcons
+      name="close"
+      size={18}
+      onPress={onPress}
+      style={styles.genreChipIcon}
+      {...getGenreChipIcon(theme)}
+    />
+  </View>
+);
+
+const styles = StyleSheet.create({
+  errorText: {
+    color: '#FF0033',
+    paddingTop: 8,
+  },
+  inputWrapper: {
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  formContent: {
+    paddingHorizontal: 24,
+  },
+  statusRow: {
+    marginVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusScrollView: {
+    marginLeft: 8,
+  },
+  statusChipContainer: {
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  statusChipPressable: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  genreList: {
+    marginVertical: 8,
+  },
+  genreChipContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    marginBottom: 4,
+    marginRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  genreChipText: {
+    fontSize: 12,
+    textTransform: 'capitalize',
+  },
+  genreChipIcon: {
+    marginLeft: 4,
+  },
+});
