@@ -693,7 +693,7 @@
     "failed": "Could not generate the recap",
     "generate": "Generate recap",
     "generating": "Summarizing chapters (%{completed}/%{total})…",
-    "notConfigured": "Add an AI provider in Settings → AI Recaps first.",
+    "notConfigured": "Add an AI provider in Settings → AI first.",
     "regenerate": "Regenerate",
     "title": "Previously on…"
   },
