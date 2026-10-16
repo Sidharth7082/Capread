@@ -37,7 +37,7 @@ android {
             applicationIdSuffix ".preRelease"
             versionNameSuffix "-pre-release"
             signingConfig signingConfigs.debug
-            resValue "string", "app_name", "LNReader Preview"
+            resValue "string", "app_name", "Capread Preview"
         }
     }
 }
