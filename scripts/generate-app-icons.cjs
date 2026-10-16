@@ -42,7 +42,13 @@ const renderSvg = (svgPath, size, targetPath) => {
   ]);
 
   const rgbaPath = `${targetPath}.rgba.png`;
-  run('magick', [targetPath, '-define', 'png:color-type=6', rgbaPath]);
+  run('magick', [
+    targetPath,
+    '-strip',
+    '-define',
+    'png:color-type=6',
+    rgbaPath,
+  ]);
   fs.renameSync(rgbaPath, targetPath);
 };
 
@@ -152,5 +158,6 @@ for (const variant of VARIANTS) {
 }
 
 render(icon, 256, path.join(README_IMAGES_DIR, 'capread-icon.png'));
+renderSvg(monochrome, 300, path.join(PROJECT_ROOT, 'assets', 'logo.png'));
 
 console.log('Generated Capread app icons.');
