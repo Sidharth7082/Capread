@@ -113,12 +113,19 @@ export interface BrowseSettings {
 }
 
 export interface AiSettings {
-  /** Enables AI-powered recap generation. */
+  /** Enables AI-powered recaps and the chapter assistant. */
   enabled: boolean;
   /** OpenAI-compatible API base URL, e.g. https://api.openai.com/v1 */
   baseUrl: string;
   apiKey: string;
   model: string;
+  /**
+   * Characters of chapter text sent as context to the chapter assistant.
+   * `0` sends the whole chapter.
+   */
+  contextChars?: number;
+  /** Previous chat turns replayed with a follow-up question. */
+  historyTurns?: number;
 }
 
 export interface LibrarySettings {
@@ -393,6 +400,8 @@ const initialAiSettings: AiSettings = {
   baseUrl: 'https://api.openai.com/v1',
   apiKey: '',
   model: '',
+  contextChars: 16000,
+  historyTurns: 10,
 };
 
 export const useAiSettings = () => {

@@ -12,6 +12,16 @@ import NativeFile from '@modules/native-file';
 import { MMKVStorage } from '@utils/mmkv/mmkv';
 import { prepareBackupData, restoreData } from '../utils';
 import type { BackupOptions } from '../options';
+import {
+  getAllNovelRecaps,
+  importNovelRecaps,
+} from '@database/queries/RecapQueries';
+import {
+  getAllChapterChatMessages,
+  getAllChapterSummaries,
+  importChapterChatMessages,
+  importChapterSummaries,
+} from '@database/queries/ChapterAiQueries';
 
 jest.mock('@database/queries/NovelQueries', () => ({
   _restoreNovelAndChapters: jest.fn(),
@@ -26,6 +36,18 @@ jest.mock('@database/queries/CategoryQueries', () => ({
   _restoreCategory: jest.fn(),
   getAllNovelCategories: jest.fn(),
   getCategoriesFromDb: jest.fn(),
+}));
+
+jest.mock('@database/queries/RecapQueries', () => ({
+  getAllNovelRecaps: jest.fn(async () => []),
+  importNovelRecaps: jest.fn(),
+}));
+
+jest.mock('@database/queries/ChapterAiQueries', () => ({
+  getAllChapterSummaries: jest.fn(async () => []),
+  getAllChapterChatMessages: jest.fn(async () => []),
+  importChapterSummaries: jest.fn(),
+  importChapterChatMessages: jest.fn(),
 }));
 
 jest.mock('@hooks/persisted/useSelfHost', () => ({
@@ -67,6 +89,7 @@ const pluginOnlyOptions: BackupOptions = {
   settings: false,
   plugins: true,
   downloadedFiles: false,
+  aiData: false,
 };
 
 describe('selective backup data', () => {
@@ -97,7 +120,7 @@ describe('selective backup data', () => {
     expect(NativeFile.writeFile).toHaveBeenCalledWith(
       '/cache/Version.json',
       expect.stringContaining(
-        '"sections":{"library":false,"settings":false,"plugins":true,"downloadedFiles":false}',
+        '"sections":{"library":false,"settings":false,"plugins":true,"downloadedFiles":false,"aiData":false}',
       ),
     );
     expect(getAllNovels).not.toHaveBeenCalled();
@@ -146,6 +169,7 @@ describe('selective backup data', () => {
       settings: true,
       plugins: true,
       downloadedFiles: false,
+      aiData: false,
     };
     jest
       .mocked(NativeFile.exists)
@@ -245,6 +269,7 @@ describe('selective backup data', () => {
       settings: false,
       plugins: false,
       downloadedFiles: false,
+      aiData: false,
     });
 
     const novelWrite = jest
@@ -266,6 +291,7 @@ describe('selective backup data', () => {
       settings: false,
       plugins: false,
       downloadedFiles: false,
+      aiData: false,
     };
     jest.mocked(NativeFile.readFile).mockImplementation(async path => {
       if (path.endsWith('/Version.json')) {
@@ -357,6 +383,7 @@ describe('selective backup data', () => {
       settings: true,
       plugins: false,
       downloadedFiles: false,
+      aiData: false,
     });
 
     const settingsWrite = jest
@@ -382,7 +409,129 @@ describe('selective backup data', () => {
         settings: true,
         plugins: true,
         downloadedFiles: true,
+        aiData: true,
       },
     });
+  });
+
+  it('writes AI recaps, summaries and chats when they are included', async () => {
+    jest.mocked(getAllNovelRecaps).mockResolvedValueOnce([
+      {
+        id: 1,
+        novelId: 5,
+        summary: 'Previously, the hero left home.',
+        upToChapterId: 10,
+        chaptersCovered: 3,
+        provider: 'provider',
+        model: 'model',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+    ]);
+    jest.mocked(getAllChapterSummaries).mockResolvedValueOnce([
+      {
+        id: 1,
+        chapterId: 10,
+        summary: 'Chapter summary',
+        provider: 'provider',
+        model: 'model',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+    ]);
+    jest.mocked(getAllChapterChatMessages).mockResolvedValueOnce([
+      {
+        id: 1,
+        chapterId: 10,
+        role: 'user',
+        content: 'who is the masked man?',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+    ]);
+
+    await prepareBackupData('/cache', {
+      library: true,
+      settings: false,
+      plugins: false,
+      downloadedFiles: false,
+      aiData: true,
+    });
+
+    const aiWrite = jest
+      .mocked(NativeFile.writeFile)
+      .mock.calls.find(([path]) => path.endsWith('/AiData.json'));
+    expect(aiWrite).toBeDefined();
+    expect(JSON.parse(aiWrite?.[1] ?? '{}')).toMatchObject({
+      recaps: [{ novelId: 5, summary: 'Previously, the hero left home.' }],
+      summaries: [{ chapterId: 10, summary: 'Chapter summary' }],
+      messages: [{ chapterId: 10, content: 'who is the masked man?' }],
+    });
+  });
+
+  it('remaps AI rows to the restored novel and chapter ids', async () => {
+    const options: BackupOptions = {
+      library: true,
+      settings: false,
+      plugins: false,
+      downloadedFiles: false,
+      aiData: true,
+    };
+    jest
+      .mocked(NativeFile.exists)
+      .mockImplementation(
+        async path =>
+          path.endsWith('/Version.json') ||
+          path.endsWith('/AiData.json') ||
+          path.endsWith('/NovelAndChapters'),
+      );
+    jest.mocked(NativeFile.readDir).mockResolvedValue([
+      {
+        path: '/cache/NovelAndChapters/5.json',
+        isDirectory: false,
+      },
+    ] as never);
+    jest.mocked(NativeFile.readFile).mockImplementation(async path => {
+      if (path.endsWith('/Version.json')) {
+        return JSON.stringify({
+          appVersion: '2.1.6',
+          formatVersion: 2,
+          sections: options,
+        });
+      }
+      if (path.endsWith('/AiData.json')) {
+        return JSON.stringify({
+          recaps: [{ id: 1, novelId: 5, summary: 'Previously…' }],
+          summaries: [{ id: 1, chapterId: 10, summary: 'Chapter summary' }],
+          messages: [
+            { id: 1, chapterId: 10, role: 'user', content: 'who?' },
+            { id: 1, chapterId: 999, role: 'user', content: 'dropped row' },
+          ],
+        });
+      }
+      return JSON.stringify({
+        id: 5,
+        name: 'Example',
+        path: '/example',
+        pluginId: 'source',
+        chapters: [{ id: 10, path: '/chapter-1', name: 'Chapter 1' }],
+      });
+    });
+    jest.mocked(_restoreNovelAndChapters).mockResolvedValueOnce({
+      pluginId: 'source',
+      backupNovelId: 5,
+      restoredNovelId: 99,
+      chapters: [{ backupChapterId: 10, restoredChapterId: 110 }],
+    });
+
+    const result = await restoreData('/cache');
+
+    expect(result.failedSectionCount).toBeGreaterThanOrEqual(0);
+    expect(importNovelRecaps).toHaveBeenCalledWith([
+      expect.objectContaining({ novelId: 99, summary: 'Previously…' }),
+    ]);
+    expect(importChapterSummaries).toHaveBeenCalledWith([
+      expect.objectContaining({ chapterId: 110, summary: 'Chapter summary' }),
+    ]);
+    expect(importChapterChatMessages).toHaveBeenCalledWith([
+      expect.objectContaining({ chapterId: 110, content: 'who?' }),
+    ]);
   });
 });

@@ -93,6 +93,23 @@ const MIGRATION_STATEMENTS = [
 	updatedAt text
 )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS novel_recap_novel_unique ON NovelRecap (novelId)`,
+  `CREATE TABLE IF NOT EXISTS ChapterSummary (
+	id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	chapterId integer NOT NULL,
+	summary text NOT NULL,
+	provider text,
+	model text,
+	updatedAt text
+)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS chapter_summary_chapter_unique ON ChapterSummary (chapterId)`,
+  `CREATE TABLE IF NOT EXISTS ChapterChatMessage (
+	id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	chapterId integer NOT NULL,
+	role text NOT NULL,
+	content text NOT NULL,
+	createdAt text
+)`,
+  `CREATE INDEX IF NOT EXISTS chapter_chat_message_chapter_idx ON ChapterChatMessage (chapterId)`,
 ];
 
 /**

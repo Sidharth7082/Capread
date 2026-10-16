@@ -10,7 +10,9 @@ import { insertTestNovel, clearAllTables } from './testData';
 
 import {
   deleteNovelRecap,
+  getAllNovelRecaps,
   getNovelRecap,
+  importNovelRecaps,
   upsertNovelRecap,
 } from '../RecapQueries';
 
@@ -99,5 +101,34 @@ describe('RecapQueries', () => {
     await deleteNovelRecap(novelId);
 
     expect(await getNovelRecap(novelId)).toBeUndefined();
+  });
+
+  it('should export and re-import recaps', async () => {
+    const testDb = getTestDb();
+    const novelId = await insertTestNovel(testDb, { inLibrary: true });
+    const restoredNovelId = await insertTestNovel(testDb, {
+      inLibrary: true,
+    });
+
+    await upsertNovelRecap({
+      novelId,
+      summary: 'Previously, the hero left home.',
+      upToChapterId: 7,
+      chaptersCovered: 5,
+    });
+
+    const recaps = await getAllNovelRecaps();
+    expect(recaps).toHaveLength(1);
+
+    await importNovelRecaps(
+      recaps.map(recap => ({ ...recap, novelId: restoredNovelId })),
+    );
+
+    const restored = await getNovelRecap(restoredNovelId);
+    expect(restored?.summary).toBe('Previously, the hero left home.');
+    expect(restored?.chaptersCovered).toBe(5);
+
+    await importNovelRecaps([]);
+    expect(await getAllNovelRecaps()).toHaveLength(2);
   });
 });

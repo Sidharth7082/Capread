@@ -50,6 +50,7 @@ describe('local selective backup', () => {
         settings: true,
         plugins: true,
         downloadedFiles: false,
+        aiData: true,
       },
     });
 
@@ -58,6 +59,7 @@ describe('local selective backup', () => {
       settings: true,
       plugins: true,
       downloadedFiles: false,
+      aiData: true,
     });
     expect(NativeZipArchive.zip).toHaveBeenCalledWith(
       '/storage/Plugins',
@@ -91,6 +93,7 @@ describe('local selective backup', () => {
           settings: true,
           plugins: true,
           downloadedFiles: false,
+          aiData: true,
         },
       },
     };

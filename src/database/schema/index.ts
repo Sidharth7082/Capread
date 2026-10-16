@@ -1,6 +1,7 @@
 import { category } from './category';
 import { novel } from './novel';
 import { chapter } from './chapter';
+import { chapterChatMessage, chapterSummary } from './chapterAi';
 import { novelCategory } from './novelCategory';
 import { novelRecap } from './novelRecap';
 import { repository } from './repository';
@@ -27,6 +28,14 @@ export {
   type NovelRecapInsert,
 } from './novelRecap';
 export {
+  chapterChatMessage as chapterChatMessageSchema,
+  chapterSummary as chapterSummarySchema,
+  type ChapterChatMessageInsert,
+  type ChapterChatMessageRow,
+  type ChapterSummaryInsert,
+  type ChapterSummaryRow,
+} from './chapterAi';
+export {
   repository as repositorySchema,
   type RepositoryRow,
   type RepositoryInsert,
@@ -40,6 +49,8 @@ export const schema = {
   category,
   novel,
   chapter,
+  chapterChatMessage,
+  chapterSummary,
   novelCategory,
   novelRecap,
   repository,

@@ -73,6 +73,7 @@ const successfulResult: RestoreResult = {
       settings: true,
       plugins: true,
       downloadedFiles: true,
+      aiData: true,
     },
   },
 };

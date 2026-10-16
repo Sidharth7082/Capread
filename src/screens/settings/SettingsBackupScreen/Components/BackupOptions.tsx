@@ -18,6 +18,7 @@ const OPTION_KEYS: BackupOptionKey[] = [
   'settings',
   'plugins',
   'downloadedFiles',
+  'aiData',
 ];
 
 const OPTION_STRINGS: Record<
@@ -43,6 +44,10 @@ const OPTION_STRINGS: Record<
     label: 'backupScreen.options.downloadedFiles',
     description: 'backupScreen.options.downloadedFilesDescription',
   },
+  aiData: {
+    label: 'backupScreen.options.aiData',
+    description: 'backupScreen.options.aiDataDescription',
+  },
 };
 
 type BackupOptionsListProps = {
@@ -66,6 +71,7 @@ export const BackupOptionsList = ({
       settings: selected,
       plugins: selected,
       downloadedFiles: selected,
+      aiData: selected,
     });
   }, [allSelected, onChange]);
 
@@ -76,7 +82,7 @@ export const BackupOptionsList = ({
         ...options,
         [key]: selected,
         ...(key === 'library' && !selected
-          ? { downloadedFiles: false }
+          ? { downloadedFiles: false, aiData: false }
           : undefined),
       });
     },
@@ -99,7 +105,8 @@ export const BackupOptionsList = ({
           style={[styles.divider, { backgroundColor: theme.outlineVariant }]}
         />
         {OPTION_KEYS.map(key => {
-          const disabled = key === 'downloadedFiles' && !options.library;
+          const disabled =
+            (key === 'downloadedFiles' || key === 'aiData') && !options.library;
           const strings = OPTION_STRINGS[key];
           return (
             <Checkbox

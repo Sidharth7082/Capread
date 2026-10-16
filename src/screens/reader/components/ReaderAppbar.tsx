@@ -33,6 +33,7 @@ interface ReaderAppbarProps {
   openInBrowser: () => void;
   shareChapter: () => void;
   showRecap: () => void;
+  showAssistant: () => void;
 }
 
 const fastOutSlowIn = Easing.bezier(0.4, 0.0, 0.2, 1.0);
@@ -53,6 +54,7 @@ const ReaderAppbar = ({
   openInBrowser,
   shareChapter,
   showRecap,
+  showAssistant,
 }: ReaderAppbarProps) => {
   const { chapter, novel, refetch } = useChapterContext();
   const { statusBarHeight } = useNovelLayout();
@@ -173,6 +175,10 @@ const ReaderAppbar = ({
             <Menu.Item
               title={getString('recapScreen.title')}
               onPress={() => runMenuAction(showRecap)}
+            />
+            <Menu.Item
+              title={getString('aiAssistant.title')}
+              onPress={() => runMenuAction(showAssistant)}
             />
             <Menu.Item
               title={getString('webview.refresh')}

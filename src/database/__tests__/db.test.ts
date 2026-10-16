@@ -810,6 +810,7 @@ describe('production migrations', () => {
         '20260727081855_calm_chimera',
         '20260811071655_parched_human_torch',
         '20261015155923_bright_mad_thinker',
+        '20261016131013_cheerful_skin',
       ]);
     } finally {
       sqlite.close();

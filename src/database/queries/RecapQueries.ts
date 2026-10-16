@@ -46,3 +46,36 @@ export const deleteNovelRecap = async (novelId: number): Promise<void> => {
       .run();
   });
 };
+
+export const getAllNovelRecaps = async (): Promise<NovelRecapRow[]> => {
+  return dbManager.select().from(novelRecapSchema).all();
+};
+
+export const importNovelRecaps = async (
+  recaps: NovelRecapInsert[],
+): Promise<void> => {
+  if (!recaps.length) {
+    return;
+  }
+
+  await dbManager.write(async tx => {
+    for (const recap of recaps) {
+      const { id: _id, ...values } = recap;
+      await tx
+        .insert(novelRecapSchema)
+        .values(values)
+        .onConflictDoUpdate({
+          target: novelRecapSchema.novelId,
+          set: {
+            summary: values.summary,
+            upToChapterId: values.upToChapterId ?? null,
+            chaptersCovered: values.chaptersCovered ?? 0,
+            provider: values.provider ?? null,
+            model: values.model ?? null,
+            updatedAt: values.updatedAt ?? null,
+          },
+        })
+        .run();
+    }
+  });
+};

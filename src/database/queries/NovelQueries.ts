@@ -23,6 +23,8 @@ import {
   novelRecapSchema,
   categorySchema,
   chapterSchema,
+  chapterChatMessageSchema,
+  chapterSummarySchema,
 } from '@database/schema';
 import type { TransactionParameter } from '@database/manager/manager.d';
 import { getLibraryDefaultCategoryId } from '@hooks/persisted/useSettings';
@@ -290,15 +292,32 @@ export const deleteCachedNovels = async () => {
       .all();
 
     if (cachedNovelIds.length) {
+      const cachedNovelIdValues = cachedNovelIds.map(({ id }) => id);
+
       await tx
         .delete(novelRecapSchema)
-        .where(
-          inArray(
-            novelRecapSchema.novelId,
-            cachedNovelIds.map(({ id }) => id),
-          ),
-        )
+        .where(inArray(novelRecapSchema.novelId, cachedNovelIdValues))
         .run();
+
+      const cachedChapterIds = await tx
+        .select({ id: chapterSchema.id })
+        .from(chapterSchema)
+        .where(inArray(chapterSchema.novelId, cachedNovelIdValues))
+        .all();
+
+      if (cachedChapterIds.length) {
+        const cachedChapterIdValues = cachedChapterIds.map(({ id }) => id);
+        await tx
+          .delete(chapterSummarySchema)
+          .where(inArray(chapterSummarySchema.chapterId, cachedChapterIdValues))
+          .run();
+        await tx
+          .delete(chapterChatMessageSchema)
+          .where(
+            inArray(chapterChatMessageSchema.chapterId, cachedChapterIdValues),
+          )
+          .run();
+      }
     }
 
     await tx.delete(novelSchema).where(eq(novelSchema.inLibrary, false)).run();

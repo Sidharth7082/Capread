@@ -69,6 +69,16 @@ jest.mock('@database/queries/RecapQueries', () => ({
   deleteNovelRecap: jest.fn(),
 }));
 
+jest.mock('@database/queries/ChapterAiQueries', () => ({
+  getChapterSummary: jest.fn(async () => undefined),
+  upsertChapterSummary: jest.fn(),
+  getChapterChatMessages: jest.fn(async () => []),
+  appendChapterChatMessage: jest.fn(),
+  clearChapterChatMessages: jest.fn(),
+  deleteChapterAiData: jest.fn(),
+  getChapterChatMessageCount: jest.fn(async () => 0),
+}));
+
 jest.mock('@database/queries/StatsQueries', () => ({
   getLibraryStatsFromDb: jest.fn(),
   getChaptersTotalCountFromDb: jest.fn(),

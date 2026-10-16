@@ -3,6 +3,8 @@ export type BackupOptions = {
   settings: boolean;
   plugins: boolean;
   downloadedFiles: boolean;
+  /** AI recaps, chapter summaries and chapter chats (kept local to the device). */
+  aiData: boolean;
 };
 
 export const DEFAULT_BACKUP_OPTIONS: BackupOptions = {
@@ -10,10 +12,11 @@ export const DEFAULT_BACKUP_OPTIONS: BackupOptions = {
   settings: true,
   plugins: true,
   downloadedFiles: true,
+  aiData: true,
 };
 
 export const resolveBackupOptions = (
-  options?: BackupOptions,
+  options?: Partial<BackupOptions>,
 ): BackupOptions => {
   const resolved = {
     ...DEFAULT_BACKUP_OPTIONS,
@@ -23,6 +26,7 @@ export const resolveBackupOptions = (
   return {
     ...resolved,
     downloadedFiles: resolved.library && resolved.downloadedFiles,
+    aiData: resolved.library && resolved.aiData,
   };
 };
 

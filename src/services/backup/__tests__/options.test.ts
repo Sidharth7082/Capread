@@ -25,12 +25,14 @@ describe('backup options', () => {
         settings: true,
         plugins: false,
         downloadedFiles: true,
+        aiData: true,
       }),
     ).toEqual({
       library: false,
       settings: true,
       plugins: false,
       downloadedFiles: false,
+      aiData: false,
     });
   });
 
@@ -41,6 +43,7 @@ describe('backup options', () => {
         settings: false,
         plugins: false,
         downloadedFiles: false,
+        aiData: false,
       }),
     ).toBe(false);
   });
@@ -52,6 +55,7 @@ describe('backup options', () => {
         settings: true,
         plugins: true,
         downloadedFiles: false,
+        aiData: false,
       }),
     ).toEqual([
       {

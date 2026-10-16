@@ -26,6 +26,7 @@ const allSelected: BackupOptions = {
   settings: true,
   plugins: true,
   downloadedFiles: true,
+  aiData: true,
 };
 
 describe('BackupOptionsList', () => {
@@ -50,6 +51,7 @@ describe('BackupOptionsList', () => {
       settings: false,
       plugins: false,
       downloadedFiles: false,
+      aiData: false,
     });
   });
 
@@ -74,10 +76,11 @@ describe('BackupOptionsList', () => {
       settings: true,
       plugins: true,
       downloadedFiles: false,
+      aiData: false,
     });
   });
 
-  it('disables downloaded files when library data is not selected', () => {
+  it('disables downloaded files and AI data when library data is not selected', () => {
     render(
       <BackupOptionsList
         onChange={() => {}}
@@ -85,6 +88,7 @@ describe('BackupOptionsList', () => {
           ...allSelected,
           library: false,
           downloadedFiles: false,
+          aiData: false,
         }}
         theme={mockTheme}
       />,
@@ -93,6 +97,11 @@ describe('BackupOptionsList', () => {
     expect(
       screen.getByRole('checkbox', {
         name: 'backupScreen.options.downloadedFiles',
+      }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('checkbox', {
+        name: 'backupScreen.options.aiData',
       }),
     ).toBeDisabled();
   });

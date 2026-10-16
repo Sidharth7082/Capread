@@ -22,12 +22,14 @@ import type {
 } from '@services/backgroundTasks/contracts';
 import { dbManager } from '@database/db';
 import {
+  chapterChatMessageSchema,
   chapterSchema,
+  chapterSummarySchema,
   novelCategorySchema,
   novelRecapSchema,
   novelSchema,
 } from '@database/schema';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 
 const sortChaptersByNumber = (novelName: string, chapters: ChapterInfo[]) => {
   for (let i = 0; i < chapters.length; ++i) {
@@ -153,6 +155,20 @@ export const migrateNovel = async (
         .update(novelRecapSchema)
         .set({ novelId: toNovel!.id })
         .where(eq(novelRecapSchema.novelId, fromNovel.id))
+        .run();
+    }
+
+    // Chapter summaries and chats are keyed by chapter id, and the migrated
+    // novel gets fresh chapter rows, so the source rows can no longer be shown.
+    const fromChapterIds = fromChapters.map(chapter => chapter.id);
+    if (fromChapterIds.length) {
+      await tx
+        .delete(chapterSummarySchema)
+        .where(inArray(chapterSummarySchema.chapterId, fromChapterIds))
+        .run();
+      await tx
+        .delete(chapterChatMessageSchema)
+        .where(inArray(chapterChatMessageSchema.chapterId, fromChapterIds))
         .run();
     }
 

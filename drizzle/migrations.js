@@ -9,6 +9,7 @@ import m0002 from './20260719143427_long_moondragon/migration.sql';
 import m0003 from './20260727081855_calm_chimera/migration.sql';
 import m0004 from './20260811071655_parched_human_torch/migration.sql';
 import m0005 from './20261015155923_bright_mad_thinker/migration.sql';
+import m0006 from './20261016131013_cheerful_skin/migration.sql';
 
 export default {
   migrations: {
@@ -18,6 +19,6 @@ export default {
     '20260727081855_calm_chimera': m0003,
     '20260811071655_parched_human_torch': m0004,
     '20261015155923_bright_mad_thinker': m0005,
+    '20261016131013_cheerful_skin': m0006,
   },
 };
-  

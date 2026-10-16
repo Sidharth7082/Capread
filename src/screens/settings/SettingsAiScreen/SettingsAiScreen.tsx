@@ -9,13 +9,36 @@ import { AiSettingsScreenProps } from '@navigators/types';
 
 import SettingSwitch from '../components/SettingSwitch';
 
+const CONTEXT_OPTIONS = [8000, 16000, 32000, 0];
+const HISTORY_OPTIONS = [5, 10, 20];
+
+const nextOption = (options: number[], current: number): number => {
+  const index = options.indexOf(current);
+  return options[(index + 1) % options.length];
+};
+
 const AiSettingsScreen = ({ navigation }: AiSettingsScreenProps) => {
   const theme = useTheme();
-  const { enabled, baseUrl, apiKey, model, setAiSettings } = useAiSettings();
+  const {
+    enabled,
+    baseUrl,
+    apiKey,
+    model,
+    contextChars = 16000,
+    historyTurns = 10,
+    setAiSettings,
+  } = useAiSettings();
 
   const [baseUrlInput, setBaseUrlInput] = useState(baseUrl);
   const [apiKeyInput, setApiKeyInput] = useState(apiKey);
   const [modelInput, setModelInput] = useState(model);
+
+  const contextLabel =
+    contextChars === 0
+      ? getString('aiSettingsScreen.contextFull')
+      : getString('aiSettingsScreen.contextChars', {
+          count: contextChars,
+        });
 
   return (
     <SafeAreaView excludeTop>
@@ -78,6 +101,38 @@ const AiSettingsScreen = ({ navigation }: AiSettingsScreenProps) => {
             underlineColor={theme.outline}
             theme={{ colors: { ...theme } }}
             style={styles.input}
+          />
+          <List.Item
+            title={getString('aiSettingsScreen.localOnly')}
+            description={getString('aiSettingsScreen.localOnlyDescription')}
+            theme={theme}
+          />
+        </List.Section>
+        <List.Section>
+          <List.SubHeader theme={theme}>
+            {getString('aiSettingsScreen.chapterAssistant')}
+          </List.SubHeader>
+          <List.Item
+            title={getString('aiSettingsScreen.contextSize')}
+            description={contextLabel}
+            onPress={() =>
+              setAiSettings({
+                contextChars: nextOption(CONTEXT_OPTIONS, contextChars),
+              })
+            }
+            theme={theme}
+          />
+          <List.Item
+            title={getString('aiSettingsScreen.chatMemory')}
+            description={getString('aiSettingsScreen.chatMemoryTurns', {
+              count: historyTurns,
+            })}
+            onPress={() =>
+              setAiSettings({
+                historyTurns: nextOption(HISTORY_OPTIONS, historyTurns),
+              })
+            }
+            theme={theme}
           />
         </List.Section>
       </ScrollView>

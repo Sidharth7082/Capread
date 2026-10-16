@@ -9,13 +9,40 @@
     "whatsNew": "What's new"
   },
   "advancedSettings": "Advanced",
-  "aiSettings": "AI Recaps",
+  "aiSettings": "AI",
+  "aiAssistant": {
+    "clear": "Clear chat",
+    "cleared": "Chat cleared",
+    "contextLimit": "Long chapters are sent up to their first %{count} characters.",
+    "empty": "Ask anything about this chapter. Answers use only the text you are reading, so they cannot spoil later chapters.",
+    "failed": "AI request failed",
+    "notConfigured": "Add an AI provider in Settings → AI first.",
+    "placeholder": "Ask about this chapter…",
+    "regenerate": "Regenerate",
+    "send": "Send",
+    "summarize": "Summarize this chapter",
+    "summarizing": "Summarizing…",
+    "summary": "Chapter summary",
+    "thinking": "Thinking…",
+    "title": "Ask AI"
+  },
   "aiSettingsScreen": {
     "apiKey": "API key",
     "baseUrl": "API base URL",
-    "enableRecaps": "Enable AI recaps",
-    "enableRecapsDescription": "Summarize the chapters you have read with an AI model to catch up when you return.",
+    "chapterAssistant": "Chapter assistant",
+    "chatMemory": "Chat memory",
+    "chatMemoryTurns": {
+      "one": "Last %{count} turn",
+      "other": "Last %{count} turns"
+    },
+    "contextChars": "First %{count} characters",
+    "contextFull": "Whole chapter",
+    "contextSize": "Chapter context",
+    "enableRecaps": "Enable AI features",
+    "enableRecapsDescription": "Recaps and the chapter assistant use the provider you configure below to summarize and answer questions about what you read.",
     "general": "General",
+    "localOnly": "Your key, your endpoint",
+    "localOnlyDescription": "Requests go straight from this device to the endpoint you enter, using your own API key. Nothing is sent to Capread and no account is needed.",
     "model": "Model",
     "provider": "AI provider"
   },
@@ -192,7 +219,9 @@
       "plugins": "Plugins",
       "pluginsDescription": "Installed source plugin files.",
       "downloadedFiles": "Downloaded chapters",
-      "downloadedFilesDescription": "Downloaded chapter content for offline reading. This may be large."
+      "downloadedFilesDescription": "Downloaded chapter content for offline reading. This may be large.",
+      "aiData": "AI chats & summaries",
+      "aiDataDescription": "Recaps, chapter summaries and chapter chats. They never leave your device except through this backup, so leave this off for cloud backups you do not control."
     },
     "preparingData": "Preparing Data",
     "preparingSelectedFiles": "Preparing selected files",

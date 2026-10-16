@@ -1,11 +1,11 @@
-import { load } from 'cheerio';
 import { getNovelChapters } from '@database/queries/ChapterQueries';
 import { getNovelById } from '@database/queries/NovelQueries';
 import { upsertNovelRecap } from '@database/queries/RecapQueries';
-import { ChapterInfo } from '@database/types';
-import NativeFile from '@modules/native-file';
-import { NOVEL_STORAGE } from '@utils/Storages';
 import { createChatCompletion, type AiChatConfig } from './client';
+import { getChapterPlainText } from './chapterText';
+import { truncateText } from './text';
+
+export { htmlToPlainText, normalizeWhitespace, truncateText } from './text';
 
 export const MAX_RECAP_CHAPTERS = 60;
 export const CHAPTER_TEXT_CHAR_CAP = 4000;
@@ -27,29 +27,6 @@ export type RecapResult = {
   upToChapterId: number;
   chaptersCovered: number;
 };
-
-export const normalizeWhitespace = (text: string): string =>
-  text
-    .replace(/\r\n?/g, '\n')
-    .replace(/[\t\f\v\u00a0 ]+/g, ' ')
-    .replace(/ *\n */g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-
-export const htmlToPlainText = (html: string): string => {
-  const $ = load(html);
-  $('script, style, noscript, template').remove();
-  $('br').replaceWith('\n');
-  $('p, div, section, article, li, blockquote, h1, h2, h3, h4, h5, h6').each(
-    (_, element) => {
-      $(element).append('\n');
-    },
-  );
-  return normalizeWhitespace($.root().text());
-};
-
-export const truncateText = (text: string, cap: number): string =>
-  text.length <= cap ? text : `${text.slice(0, cap)}…`;
 
 /**
  * Picks the most recent read chapters and splits them into batches that fit
@@ -108,21 +85,6 @@ export const buildRecapPrompt = (novelName: string, sourceText: string) => ({
   user: sourceText,
 });
 
-const getChapterHtml = async (
-  pluginId: string,
-  chapter: ChapterInfo,
-): Promise<string> => {
-  const filePath = `${NOVEL_STORAGE}/${pluginId}/${chapter.novelId}/${chapter.id}/index.html`;
-  try {
-    return await NativeFile.readFile(filePath);
-  } catch {
-    // Imported lazily so loading the recap UI does not pull the plugin
-    // sandbox (and its heavy dependencies) into the module graph.
-    const { fetchChapter } = await import('@services/plugin/fetch');
-    return await fetchChapter(pluginId, chapter.path);
-  }
-};
-
 export type GenerateRecapParams = {
   novelId: number;
   /**
@@ -166,8 +128,7 @@ export const generateNovelRecap = async ({
 
   const sources: RecapSourceChapter[] = [];
   for (const chapter of candidateChapters) {
-    const html = await getChapterHtml(novel.pluginId, chapter);
-    const text = htmlToPlainText(html);
+    const text = await getChapterPlainText(novel.pluginId, chapter);
     if (text) {
       sources.push({ id: chapter.id, name: chapter.name, text });
     }

@@ -9,6 +9,16 @@ import {
 } from '@database/queries/NovelQueries';
 import { getAllNovelChaptersForBackup } from '@database/queries/ChapterQueries';
 import {
+  getAllNovelRecaps,
+  importNovelRecaps,
+} from '@database/queries/RecapQueries';
+import {
+  getAllChapterChatMessages,
+  getAllChapterSummaries,
+  importChapterChatMessages,
+  importChapterSummaries,
+} from '@database/queries/ChapterAiQueries';
+import {
   _restoreCategory,
   getAllNovelCategories,
   getCategoriesFromDb,
@@ -205,6 +215,23 @@ export const prepareBackupData = async (
     }
   }
 
+  // AI recaps, chapter summaries and chapter chats (kept on-device)
+  if (options.aiData) {
+    try {
+      const [recaps, summaries, messages] = await Promise.all([
+        getAllNovelRecaps(),
+        getAllChapterSummaries(),
+        getAllChapterChatMessages(),
+      ]);
+      await NativeFile.writeFile(
+        cacheDirPath + '/' + BackupEntryName.AI_DATA,
+        JSON.stringify({ recaps, summaries, messages }),
+      );
+    } catch {
+      failedSectionCount++;
+    }
+  }
+
   return {
     failedNovelCount,
     failedSectionCount,
@@ -329,6 +356,59 @@ export const restoreData = async (
           failedCount++;
         }
       }
+    } catch {
+      failedSectionCount++;
+    }
+  }
+
+  // AI recaps, chapter summaries and chapter chats. Chapter ids are re-created
+  // during restore, so rows are remapped through the recorded id pairs.
+  const aiDataFilePath = cacheDirPath + '/' + BackupEntryName.AI_DATA;
+  if (manifest.sections.library && (await NativeFile.exists(aiDataFilePath))) {
+    try {
+      const fileContent = await NativeFile.readFile(aiDataFilePath);
+      const aiData = JSON.parse(fileContent) as {
+        recaps?: { novelId: number; summary: string }[];
+        summaries?: { chapterId: number; summary: string }[];
+        messages?: {
+          chapterId: number;
+          role: string;
+          content: string;
+          createdAt?: string | null;
+        }[];
+      };
+
+      const chapterIdMap = new Map<number, number>();
+      for (const mapping of novelMappings) {
+        for (const chapter of mapping.chapters) {
+          chapterIdMap.set(chapter.backupChapterId, chapter.restoredChapterId);
+        }
+      }
+
+      const recaps = (aiData.recaps ?? [])
+        .filter(recap => novelIdMap.has(recap.novelId))
+        .map(recap => ({
+          ...recap,
+          novelId: novelIdMap.get(recap.novelId) as number,
+        }));
+
+      const summaries = (aiData.summaries ?? [])
+        .filter(summary => chapterIdMap.has(summary.chapterId))
+        .map(summary => ({
+          ...summary,
+          chapterId: chapterIdMap.get(summary.chapterId) as number,
+        }));
+
+      const messages = (aiData.messages ?? [])
+        .filter(message => chapterIdMap.has(message.chapterId))
+        .map(message => ({
+          ...message,
+          chapterId: chapterIdMap.get(message.chapterId) as number,
+        }));
+
+      await importNovelRecaps(recaps);
+      await importChapterSummaries(summaries);
+      await importChapterChatMessages(messages);
     } catch {
       failedSectionCount++;
     }

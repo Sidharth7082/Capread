@@ -8,7 +8,7 @@ import WebViewReader from './components/WebViewReader';
 import ReaderBottomSheetV2 from './components/ReaderBottomSheet/ReaderBottomSheet';
 import ChapterDrawer from './components/ChapterDrawer';
 import ChapterLoadingScreen from './ChapterLoadingScreen/ChapterLoadingScreen';
-import { AiRecapModal, ErrorScreenV2 } from '@components';
+import { AiChapterAssistant, AiRecapModal, ErrorScreenV2 } from '@components';
 import { ChapterScreenProps } from '@navigators/types';
 import { getString } from '@i18n/translations';
 import KeepScreenAwake from './components/KeepScreenAwake';
@@ -148,6 +148,9 @@ export const ChapterContent = ({
   const [recapModalVisible, setRecapModalVisible] = useState(false);
   const openRecapModal = useCallback(() => setRecapModalVisible(true), []);
   const closeRecapModal = useCallback(() => setRecapModalVisible(false), []);
+  const [assistantVisible, setAssistantVisible] = useState(false);
+  const openAssistant = useCallback(() => setAssistantVisible(true), []);
+  const closeAssistant = useCallback(() => setAssistantVisible(false), []);
   const searchTextRef = useRef('');
   /**
    * The settings sheet mounts a tab view (including the TTS engine/voice
@@ -336,6 +339,7 @@ export const ChapterContent = ({
             openInBrowser={openChapterInBrowser}
             shareChapter={shareChapter}
             showRecap={openRecapModal}
+            showAssistant={openAssistant}
           />
           {!searchVisible ? (
             <ReaderFooter
@@ -351,6 +355,12 @@ export const ChapterContent = ({
         upToChapterId={chapter.id}
         visible={recapModalVisible}
         onDismiss={closeRecapModal}
+      />
+      <AiChapterAssistant
+        chapter={{ id: chapter.id, name: chapter.name }}
+        novelId={novel.id}
+        visible={assistantVisible}
+        onDismiss={closeAssistant}
       />
     </View>
   );
