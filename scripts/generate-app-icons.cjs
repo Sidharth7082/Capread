@@ -74,6 +74,7 @@ const renderRoundSvg = (svgPath, size, targetPath) => {
     '-compose',
     'CopyOpacity',
     '-composite',
+    '-strip',
     targetPath,
   ]);
 
