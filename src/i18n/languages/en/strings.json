@@ -98,6 +98,8 @@
     "darkTheme": "Dark Theme",
     "dateFormat": "Date format",
     "dateFormatDefault": "Default (%{date})",
+    "disableScreenAnimations": "Disable screen transitions",
+    "disableScreenAnimationsDescription": "No slide animation when opening a novel or a chapter",
     "dynamicColors": "Dynamic",
     "hideBackdrop": "Hide backdrop",
     "lightTheme": "Light Theme",
@@ -112,6 +114,7 @@
     "themeModeLight": "Light",
     "themeModeDark": "Dark",
     "themeModeSystem": "System",
+    "transitions": "Transitions",
     "theme": {
       "default": "Default",
       "lavender": "Lavender",
@@ -544,10 +547,17 @@
         "unreadBadges": "Unread badges"
       },
       "filters": {
+        "cancelled": "Cancelled",
         "completed": "Completed",
         "downloaded": "Downloaded",
+        "onHiatus": "On Hiatus",
+        "ongoing": "Ongoing",
         "started": "Started",
         "unread": "Unread"
+      },
+      "genreFilter": {
+        "clear": "Clear genre filter",
+        "title": "Genres"
       },
       "sortOrders": {
         "alphabetically": "Alphabetically",

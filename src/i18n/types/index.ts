@@ -89,6 +89,8 @@ export interface StringMap {
   'appearanceScreen.darkTheme': 'string';
   'appearanceScreen.dateFormat': 'string';
   'appearanceScreen.dateFormatDefault': 'string';
+  'appearanceScreen.disableScreenAnimations': 'string';
+  'appearanceScreen.disableScreenAnimationsDescription': 'string';
   'appearanceScreen.dynamicColors': 'string';
   'appearanceScreen.hideBackdrop': 'string';
   'appearanceScreen.lightTheme': 'string';
@@ -103,6 +105,7 @@ export interface StringMap {
   'appearanceScreen.themeModeLight': 'string';
   'appearanceScreen.themeModeDark': 'string';
   'appearanceScreen.themeModeSystem': 'string';
+  'appearanceScreen.transitions': 'string';
   'appearanceScreen.theme.default': 'string';
   'appearanceScreen.theme.lavender': 'string';
   'appearanceScreen.theme.midnightDusk': 'string';
@@ -471,10 +474,15 @@ export interface StringMap {
   'libraryScreen.bottomSheet.display.showNoOfItems': 'string';
   'libraryScreen.bottomSheet.display.unread': 'string';
   'libraryScreen.bottomSheet.display.unreadBadges': 'string';
+  'libraryScreen.bottomSheet.filters.cancelled': 'string';
   'libraryScreen.bottomSheet.filters.completed': 'string';
   'libraryScreen.bottomSheet.filters.downloaded': 'string';
+  'libraryScreen.bottomSheet.filters.onHiatus': 'string';
+  'libraryScreen.bottomSheet.filters.ongoing': 'string';
   'libraryScreen.bottomSheet.filters.started': 'string';
   'libraryScreen.bottomSheet.filters.unread': 'string';
+  'libraryScreen.bottomSheet.genreFilter.clear': 'string';
+  'libraryScreen.bottomSheet.genreFilter.title': 'string';
   'libraryScreen.bottomSheet.sortOrders.alphabetically': 'string';
   'libraryScreen.bottomSheet.sortOrders.dateAdded': 'string';
   'libraryScreen.bottomSheet.sortOrders.download': 'string';

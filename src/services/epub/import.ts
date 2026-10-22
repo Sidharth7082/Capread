@@ -72,49 +72,64 @@ const insertLocalNovel = async (
   throw new Error(getString('advancedSettingsScreen.novelInsertFailed'));
 };
 
-const insertLocalChapter = async (
-  novelId: number,
-  fakeId: number,
-  name: string,
-  path: string,
-  releaseTime: string,
-) => {
-  const { insertId } = await dbManager.write(async tx => {
-    return tx
-      .insert(chapterSchema)
-      .values({
-        novelId,
-        name,
-        path: NOVEL_STORAGE + '/local/' + novelId + '/' + fakeId,
-        releaseTime,
-        position: fakeId,
-        isDownloaded: true,
-      })
-      .run();
-  });
+const CHAPTER_IO_CONCURRENCY = 8;
 
-  if (insertId !== undefined && insertId >= 0) {
-    let chapterText: string = '';
-    chapterText = await NativeFile.readFile(decodePath(path));
-    if (!chapterText) {
-      return [];
-    }
-    const novelDir = `${NOVEL_STORAGE}/local/${novelId}`;
-    chapterText = chapterText.replace(
-      /[=](?<= href=| src=)(["'])([^]*?)\1/g,
-      (_, __, $2: string) => {
-        return `="file://${novelDir}/${$2.split(/[/\\]/).pop()}"`;
-      },
-    );
-    await NativeFile.mkdir(novelDir + '/' + insertId);
-    await NativeFile.writeFile(
-      `${novelDir}/${insertId}/index.html`,
-      chapterText,
-    );
+const writeLocalChapter = async (
+  novelId: number,
+  chapterId: number,
+  sourcePath: string,
+) => {
+  const chapterText = await NativeFile.readFile(decodePath(sourcePath));
+  if (!chapterText) {
     return;
   }
-  throw new Error(getString('advancedSettingsScreen.chapterInsertFailed'));
+  const novelDir = `${NOVEL_STORAGE}/local/${novelId}`;
+  const rewrittenText = chapterText.replace(
+    /[=](?<= href=| src=)(["'])([^]*?)\1/g,
+    (_, __, $2: string) => {
+      return `="file://${novelDir}/${$2.split(/[/\\]/).pop()}"`;
+    },
+  );
+  await NativeFile.mkdir(novelDir + '/' + chapterId);
+  await NativeFile.writeFile(
+    `${novelDir}/${chapterId}/index.html`,
+    rewrittenText,
+  );
 };
+
+/**
+ * Inserts every chapter row in a single transaction and returns the row ids in
+ * chapter order. The previous per-chapter transactions paid a commit for every
+ * chapter, which dominated import time for books with thousands of chapters.
+ */
+const insertLocalChapters = async (
+  novelId: number,
+  names: string[],
+  releaseTime: string,
+): Promise<number[]> =>
+  dbManager.write(async tx => {
+    const ids: number[] = [];
+    for (let position = 0; position < names.length; position++) {
+      const { insertId } = await tx
+        .insert(chapterSchema)
+        .values({
+          novelId,
+          name: names[position],
+          path: NOVEL_STORAGE + '/local/' + novelId + '/' + position,
+          releaseTime,
+          position,
+          isDownloaded: true,
+        })
+        .run();
+      if (insertId === undefined || insertId < 0) {
+        throw new Error(
+          getString('advancedSettingsScreen.chapterInsertFailed'),
+        );
+      }
+      ids.push(insertId);
+    }
+    return ids;
+  });
 
 export const importEpub = async (
   { uri, filename }: EpubImportFile,
@@ -151,15 +166,30 @@ export const importEpub = async (
     );
     const now = dayjs().toISOString();
     if (novel.chapters) {
+      const chapters = novel.chapters;
+      const names = chapters.map(
+        chapter =>
+          chapter.name || chapter.path.split(/[/\\]/).pop() || 'unknown',
+      );
+      const chapterIds = await insertLocalChapters(novelId, names, now);
       const reportProgress = createImportProgressReporter(setMeta);
-      for (let i = 0; i < novel.chapters?.length; i++) {
-        const chapter = novel.chapters[i];
-        if (!chapter.name) {
-          chapter.name = chapter.path.split(/[/\\]/).pop() || 'unknown';
-        }
 
-        await insertLocalChapter(novelId, i, chapter.name, chapter.path, now);
-        reportProgress(i + 1, novel.chapters.length, chapter.name);
+      // File work dominates the import, so a few chapters are written at a time
+      // instead of strictly serialising every read and write.
+      for (
+        let start = 0;
+        start < chapterIds.length;
+        start += CHAPTER_IO_CONCURRENCY
+      ) {
+        const end = Math.min(start + CHAPTER_IO_CONCURRENCY, chapterIds.length);
+        const writes: Promise<void>[] = [];
+        for (let index = start; index < end; index++) {
+          writes.push(
+            writeLocalChapter(novelId, chapterIds[index], chapters[index].path),
+          );
+        }
+        await Promise.all(writes);
+        reportProgress(end, chapterIds.length, names[end - 1]);
       }
     }
     const novelDir = NOVEL_STORAGE + '/local/' + novelId;

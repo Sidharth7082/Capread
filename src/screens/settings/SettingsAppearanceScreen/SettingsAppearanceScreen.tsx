@@ -47,6 +47,7 @@ const AppearanceSettings = ({ navigation }: AppearanceSettingsScreenProps) => {
     showLabelsInNav,
     hideBackdrop,
     useFabForContinueReading,
+    disableScreenAnimations = false,
     dateFormat = 'default',
     relativeTimestamps = true,
     setAppSettings,
@@ -294,6 +295,22 @@ const AppearanceSettings = ({ navigation }: AppearanceSettingsScreenProps) => {
             value={showLabelsInNav}
             onPress={() =>
               setAppSettings({ showLabelsInNav: !showLabelsInNav })
+            }
+            theme={theme}
+          />
+          <List.SubHeader theme={theme}>
+            {getString('appearanceScreen.transitions')}
+          </List.SubHeader>
+          <SettingSwitch
+            label={getString('appearanceScreen.disableScreenAnimations')}
+            description={getString(
+              'appearanceScreen.disableScreenAnimationsDescription',
+            )}
+            value={disableScreenAnimations}
+            onPress={() =>
+              setAppSettings({
+                disableScreenAnimations: !disableScreenAnimations,
+              })
             }
             theme={theme}
           />

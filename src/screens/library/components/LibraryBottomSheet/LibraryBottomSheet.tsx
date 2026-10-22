@@ -3,11 +3,12 @@ import {
   StyleProp,
   StyleSheet,
   Text,
+  Pressable,
   useWindowDimensions,
   View,
   ViewStyle,
 } from 'react-native';
-import { SceneMap, TabDescriptor, TabView } from 'react-native-tab-view';
+import { TabDescriptor, TabView } from 'react-native-tab-view';
 
 import { useLibrarySettings, useTheme } from '@hooks/persisted';
 import { getString } from '@i18n/translations';
@@ -30,39 +31,123 @@ import { LegendList } from '@legendapp/list/react-native';
 interface LibraryBottomSheetProps {
   bottomSheetRef: RefObject<BottomSheetModalMethods | null>;
   style?: StyleProp<ViewStyle>;
+  /** Genres present in the current library, used by the genre filter. */
+  availableGenres?: string[];
 }
 
-const FirstRoute = () => {
+const FirstRoute = ({
+  availableGenres = [],
+}: {
+  availableGenres?: string[];
+}) => {
   const theme = useTheme();
   const {
     filter,
+    genreFilter = [],
     setLibrarySettings,
     downloadedOnlyMode = false,
   } = useLibrarySettings();
+
+  type FilterRow =
+    | { kind: 'filter'; key: string; label: string; filter: LibraryFilter }
+    | { kind: 'header'; key: string; title: string }
+    | { kind: 'genre'; key: string; genre: string }
+    | { kind: 'clear'; key: string };
+
+  const rows = useMemo<FilterRow[]>(() => {
+    const items: FilterRow[] = libraryFilterList.map(item => ({
+      kind: 'filter',
+      key: `filter_${item.filter}`,
+      label: item.label,
+      filter: item.filter,
+    }));
+
+    if (availableGenres.length) {
+      items.push({
+        kind: 'header',
+        key: 'genre_header',
+        title: getString('libraryScreen.bottomSheet.genreFilter.title'),
+      });
+      for (const genre of availableGenres) {
+        items.push({ kind: 'genre', key: `genre_${genre}`, genre });
+      }
+      if (genreFilter.length) {
+        items.push({ kind: 'clear', key: 'genre_clear' });
+      }
+    }
+
+    return items;
+  }, [availableGenres, genreFilter.length]);
+
+  const toggleGenre = (genre: string) => {
+    setLibrarySettings({
+      genreFilter: genreFilter.includes(genre)
+        ? genreFilter.filter(item => item !== genre)
+        : [...genreFilter, genre],
+    });
+  };
 
   return (
     <View style={styles.flex}>
       <LegendList
         recycleItems
         estimatedItemSize={4}
-        extraData={[filter]}
-        data={libraryFilterList}
-        keyExtractor={item => `filter_${item.filter}`}
-        renderItem={({ item }) => (
-          <Checkbox
-            label={item.label}
-            theme={theme}
-            status={filter === item.filter}
-            onPress={() =>
-              setLibrarySettings({
-                filter: filter === item.filter ? undefined : item.filter,
-              })
-            }
-            disabled={
-              item.filter === LibraryFilter.Downloaded && downloadedOnlyMode
-            }
-          />
-        )}
+        extraData={[filter, genreFilter]}
+        data={rows}
+        keyExtractor={item => item.key}
+        renderItem={({ item }) => {
+          switch (item.kind) {
+            case 'header':
+              return (
+                <Text
+                  style={[
+                    styles.sectionHeader,
+                    { color: theme.onSurfaceVariant },
+                  ]}
+                >
+                  {item.title}
+                </Text>
+              );
+            case 'genre':
+              return (
+                <Checkbox
+                  label={item.genre}
+                  theme={theme}
+                  status={genreFilter.includes(item.genre)}
+                  onPress={() => toggleGenre(item.genre)}
+                />
+              );
+            case 'clear':
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setLibrarySettings({ genreFilter: [] })}
+                  style={styles.clearFilter}
+                >
+                  <Text style={{ color: theme.primary }}>
+                    {getString('libraryScreen.bottomSheet.genreFilter.clear')}
+                  </Text>
+                </Pressable>
+              );
+            default:
+              return (
+                <Checkbox
+                  label={item.label}
+                  theme={theme}
+                  status={filter === item.filter}
+                  onPress={() =>
+                    setLibrarySettings({
+                      filter: filter === item.filter ? undefined : item.filter,
+                    })
+                  }
+                  disabled={
+                    item.filter === LibraryFilter.Downloaded &&
+                    downloadedOnlyMode
+                  }
+                />
+              );
+          }
+        }}
       />
     </View>
   );
@@ -184,15 +269,10 @@ const ThirdRoute = () => {
   );
 };
 
-const bottomSheetSceneMap = SceneMap({
-  first: FirstRoute,
-  second: SecondRoute,
-  third: ThirdRoute,
-});
-
 const LibraryBottomSheet: React.FC<LibraryBottomSheetProps> = ({
   bottomSheetRef,
   style,
+  availableGenres = [],
 }) => {
   const theme = useTheme();
 
@@ -260,7 +340,16 @@ const LibraryBottomSheet: React.FC<LibraryBottomSheetProps> = ({
           commonOptions={commonOptions}
           navigationState={{ index, routes }}
           renderTabBar={renderTabBar}
-          renderScene={bottomSheetSceneMap}
+          renderScene={({ route }) => {
+            switch (route.key) {
+              case 'first':
+                return <FirstRoute availableGenres={availableGenres} />;
+              case 'second':
+                return <SecondRoute />;
+              default:
+                return <ThirdRoute />;
+            }
+          }}
           onIndexChange={setIndex}
           initialLayout={{ width: layout.width }}
           style={styles.tabView}
@@ -275,6 +364,10 @@ export default LibraryBottomSheet;
 const styles = StyleSheet.create({
   bottomSheetCtn: {
     flex: 1,
+  },
+  clearFilter: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   sectionHeader: {
     padding: 16,

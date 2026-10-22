@@ -57,6 +57,8 @@ export interface AppSettings {
   showLabelsInNav: boolean;
   useFabForContinueReading: boolean;
   disableLoadingAnimations: boolean;
+  /** Removes the slide animation when opening a novel or a chapter. */
+  disableScreenAnimations?: boolean;
   dateFormat?: DateFormat;
   relativeTimestamps?: boolean;
 
@@ -139,6 +141,8 @@ export interface LibrarySettings {
   globalUpdateIncludeCategoryIds?: number[];
   sortOrder?: LibrarySortOrder;
   filter?: LibraryFilter;
+  /** Genres every novel in the library view must have (AND match). */
+  genreFilter?: string[];
   showDownloadBadges?: boolean;
   showUnreadBadges?: boolean;
   showContinueReadingButton?: boolean;
@@ -276,6 +280,7 @@ const initialAppSettings: AppSettings = {
   showLabelsInNav: true,
   useFabForContinueReading: false,
   disableLoadingAnimations: false,
+  disableScreenAnimations: false,
   dateFormat: 'default',
   relativeTimestamps: true,
 

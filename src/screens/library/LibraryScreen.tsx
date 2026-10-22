@@ -33,7 +33,12 @@ import LibraryBottomSheet from './components/LibraryBottomSheet/LibraryBottomShe
 import { Banner } from './components/Banner';
 import { Actionbar } from '@components/Actionbar/Actionbar';
 
-import { useAppSettings, useHistory, useTheme } from '@hooks/persisted';
+import {
+  useAppSettings,
+  useHistory,
+  useLibrarySettings,
+  useTheme,
+} from '@hooks/persisted';
 import { useSearch, useBackHandler, useBoolean } from '@hooks';
 import { getString } from '@i18n/translations';
 import { FAB, Portal } from 'react-native-paper';
@@ -56,6 +61,7 @@ import { useLibraryContext } from '@components/Context/LibraryContext';
 import xor from 'lodash-es/xor';
 import { SelectionContext } from './SelectionContext';
 import { getLibraryCategoryIndex } from './constants/constants';
+import { matchesLibraryFilters } from './utils/libraryFilters';
 
 type State = NavigationState<{
   key: string;
@@ -156,11 +162,22 @@ const LibraryScreen = ({ navigation }: LibraryScreenProps) => {
     [selectedIdsSet, hasSelection, toggleSelection],
   );
 
+  const searchLower = useMemo(() => searchText.toLowerCase(), [searchText]);
+
+  const { genreFilter = [] } = useLibrarySettings();
+
+  const filterCriteria = useMemo(
+    () => ({ searchLower, genres: genreFilter }),
+    [searchLower, genreFilter],
+  );
+
   const currentNovels = useMemo(() => {
     if (!categories.length) return [];
     const idsSet = new Set(categories[index].novelIds);
-    return library.filter(l => idsSet.has(l.id));
-  }, [categories, index, library]);
+    return library.filter(
+      l => idsSet.has(l.id) && matchesLibraryFilters(l, filterCriteria),
+    );
+  }, [categories, index, library, filterCriteria]);
 
   useBackHandler(() => {
     if (selectedNovelIds.length) {
@@ -207,7 +224,37 @@ const LibraryScreen = ({ navigation }: LibraryScreenProps) => {
     }).then(importNovel);
   }, [importNovel]);
 
-  const searchLower = useMemo(() => searchText.toLowerCase(), [searchText]);
+  const availableGenres = useMemo(() => {
+    const genres = new Set<string>();
+    for (const novel of library) {
+      for (const genre of (novel.genres ?? '').split(',')) {
+        const trimmed = genre.trim();
+        if (trimmed) {
+          genres.add(trimmed);
+        }
+      }
+    }
+    return Array.from(genres).sort((a, b) => a.localeCompare(b));
+  }, [library]);
+
+  const filteredCounts = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const category of categories) {
+      const ids = new Set(category.novelIds);
+      counts.set(
+        category.id,
+        library.reduce(
+          (total, novel) =>
+            total +
+            (ids.has(novel.id) && matchesLibraryFilters(novel, filterCriteria)
+              ? 1
+              : 0),
+          0,
+        ),
+      );
+    }
+    return counts;
+  }, [categories, library, filterCriteria]);
 
   const renderTabBar = useCallback(
     (props: SceneRendererProps & { navigationState: State }) => {
@@ -257,15 +304,9 @@ const LibraryScreen = ({ navigation }: LibraryScreenProps) => {
       };
     }) => {
       const idsSet = new Set(route.novelIds);
-      const unfilteredNovels = library.filter(l => idsSet.has(l.id));
-
-      const novels = searchLower
-        ? unfilteredNovels.filter(
-            n =>
-              n.name.toLowerCase().includes(searchLower) ||
-              (n.author?.toLowerCase().includes(searchLower) ?? false),
-          )
-        : unfilteredNovels;
+      const novels = library.filter(
+        l => idsSet.has(l.id) && matchesLibraryFilters(l, filterCriteria),
+      );
 
       return (
         <>
@@ -301,14 +342,14 @@ const LibraryScreen = ({ navigation }: LibraryScreenProps) => {
       navigation,
       pickAndImport,
       searchText,
-      searchLower,
+      filterCriteria,
       styles.globalSearchBtn,
     ],
   );
 
   const renderLabel = useCallback(
     ({ route, color }: TabViewLabelProps) => {
-      const novelIds = route?.novelIds?.filter(id => id !== 0);
+      const count = filteredCounts.get(route.id) ?? 0;
 
       return (
         <Row>
@@ -323,7 +364,7 @@ const LibraryScreen = ({ navigation }: LibraryScreenProps) => {
               <Text
                 style={[styles.badgetText, { color: theme.onSurfaceVariant }]}
               >
-                {novelIds.length}
+                {count}
               </Text>
             </View>
           ) : null}
@@ -331,6 +372,7 @@ const LibraryScreen = ({ navigation }: LibraryScreenProps) => {
       );
     },
     [
+      filteredCounts,
       showNumberOfNovels,
       styles.badgeCtn,
       styles.badgetText,
@@ -570,6 +612,7 @@ const LibraryScreen = ({ navigation }: LibraryScreenProps) => {
       <LibraryBottomSheet
         bottomSheetRef={bottomSheetRef}
         style={bottomSheetStyle}
+        availableGenres={availableGenres}
       />
       <Portal>
         <Actionbar

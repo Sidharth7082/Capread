@@ -14,6 +14,9 @@ export enum LibraryFilter {
   Completed = "status LIKE 'Completed'",
   DownloadedOnly = 'AND chaptersDownloaded > 0',
   Started = 'lastReadAt IS NOT NULL',
+  Ongoing = "status LIKE 'Ongoing'",
+  OnHiatus = "status LIKE 'On Hiatus'",
+  Cancelled = "status LIKE 'Cancelled'",
 }
 
 export const libraryFilterList = [
@@ -32,6 +35,18 @@ export const libraryFilterList = [
   {
     label: getString('libraryScreen.bottomSheet.filters.completed'),
     filter: LibraryFilter.Completed,
+  },
+  {
+    label: getString('libraryScreen.bottomSheet.filters.ongoing'),
+    filter: LibraryFilter.Ongoing,
+  },
+  {
+    label: getString('libraryScreen.bottomSheet.filters.onHiatus'),
+    filter: LibraryFilter.OnHiatus,
+  },
+  {
+    label: getString('libraryScreen.bottomSheet.filters.cancelled'),
+    filter: LibraryFilter.Cancelled,
   },
 ];
 
