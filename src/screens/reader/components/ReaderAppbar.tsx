@@ -32,6 +32,8 @@ interface ReaderAppbarProps {
   openInWebView: () => void;
   openInBrowser: () => void;
   shareChapter: () => void;
+  copyChapterText: () => void;
+  copyChapterLink: () => void;
   showRecap: () => void;
   showAssistant: () => void;
 }
@@ -53,6 +55,8 @@ const ReaderAppbar = ({
   openInWebView,
   openInBrowser,
   shareChapter,
+  copyChapterText,
+  copyChapterLink,
   showRecap,
   showAssistant,
 }: ReaderAppbarProps) => {
@@ -179,6 +183,14 @@ const ReaderAppbar = ({
             <Menu.Item
               title={getString('aiAssistant.title')}
               onPress={() => runMenuAction(showAssistant)}
+            />
+            <Menu.Item
+              title={getString('readerScreen.copyChapter')}
+              onPress={() => runMenuAction(copyChapterText)}
+            />
+            <Menu.Item
+              title={getString('readerScreen.copyLink')}
+              onPress={() => runMenuAction(copyChapterLink)}
             />
             <Menu.Item
               title={getString('webview.refresh')}

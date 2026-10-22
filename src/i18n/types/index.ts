@@ -15,6 +15,7 @@ export interface StringMap {
   'aiAssistant.clear': 'string';
   'aiAssistant.cleared': 'string';
   'aiAssistant.contextLimit': 'string';
+  'aiAssistant.copySummary': 'string';
   'aiAssistant.empty': 'string';
   'aiAssistant.failed': 'string';
   'aiAssistant.notConfigured': 'string';
@@ -24,6 +25,7 @@ export interface StringMap {
   'aiAssistant.summarize': 'string';
   'aiAssistant.summarizing': 'string';
   'aiAssistant.summary': 'string';
+  'aiAssistant.summaryCopied': 'string';
   'aiAssistant.thinking': 'string';
   'aiAssistant.title': 'string';
   'aiSettingsScreen.apiKey': 'string';
@@ -633,6 +635,12 @@ export interface StringMap {
   'readerScreen.drawer.scrollToBottom': 'string';
   'readerScreen.drawer.scrollToCurrentChapter': 'string';
   'readerScreen.drawer.scrollToTop': 'string';
+  'readerScreen.copyChapter': 'string';
+  'readerScreen.copyChapterFailed': 'string';
+  'readerScreen.copyChapterSuccess.one': 'string';
+  'readerScreen.copyChapterSuccess.other': 'string';
+  'readerScreen.copyLink': 'string';
+  'readerScreen.copyLinkSuccess': 'string';
   'readerScreen.emptyChapterMessage': 'string';
   'readerScreen.finished': 'string';
   'readerScreen.nextChapter': 'string';

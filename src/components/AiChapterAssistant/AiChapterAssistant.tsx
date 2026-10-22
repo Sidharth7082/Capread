@@ -6,7 +6,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { TextInput } from 'react-native-paper';
+import { IconButton, TextInput } from 'react-native-paper';
 
 import { Button, Dialog } from '@components';
 import { useAiSettings, useTheme } from '@hooks/persisted';
@@ -19,6 +19,7 @@ import {
 import type { ChapterChatMessageRow } from '@database/schema';
 import { askAboutChapter, summarizeChapter } from '@services/ai/chapter';
 import { showToast } from '@utils/showToast';
+import * as Clipboard from 'expo-clipboard';
 
 export interface AiChapterAssistantProps {
   chapter: { id: number; name: string };
@@ -189,6 +190,15 @@ const AiChapterAssistant = ({
     showToast(getString('aiAssistant.cleared'));
   }, [chapter.id]);
 
+  const handleCopySummary = useCallback(() => {
+    if (!summary) {
+      return;
+    }
+    void Clipboard.setStringAsync(summary).then(() =>
+      showToast(getString('aiAssistant.summaryCopied')),
+    );
+  }, [summary]);
+
   const contextLimitNote =
     aiSettings.contextChars && aiSettings.contextChars > 0
       ? getString('aiAssistant.contextLimit', {
@@ -213,9 +223,19 @@ const AiChapterAssistant = ({
                 { backgroundColor: theme.surfaceVariant },
               ]}
             >
-              <Text style={[styles.label, { color: theme.onSurfaceVariant }]}>
-                {getString('aiAssistant.summary')}
-              </Text>
+              <View style={styles.summaryHeader}>
+                <Text style={[styles.label, { color: theme.onSurfaceVariant }]}>
+                  {getString('aiAssistant.summary')}
+                </Text>
+                <IconButton
+                  accessibilityLabel={getString('aiAssistant.copySummary')}
+                  icon="content-copy"
+                  size={16}
+                  onPress={handleCopySummary}
+                  iconColor={theme.onSurfaceVariant}
+                  style={styles.summaryCopy}
+                />
+              </View>
               <Text style={{ color: theme.onSurface }}>{summary}</Text>
             </View>
           ) : null}
@@ -341,7 +361,6 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    marginBottom: 4,
     textTransform: 'uppercase',
   },
   note: {
@@ -365,6 +384,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 12,
     padding: 12,
+  },
+  summaryHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  summaryCopy: {
+    margin: -6,
   },
   userBubble: {
     alignSelf: 'flex-end',

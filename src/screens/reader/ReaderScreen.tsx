@@ -30,7 +30,10 @@ import {
 import { Drawer } from 'react-native-drawer-layout';
 import { EMPTY_READER_SEARCH_RESULT, ReaderSearchResult } from './types';
 import * as Linking from 'expo-linking';
+import * as Clipboard from 'expo-clipboard';
 import { resolveUrl } from '@services/plugin/fetch';
+import { getChapterPlainText } from '@services/ai/chapterText';
+import { showToast } from '@utils/showToast';
 
 const Chapter = ({ route, navigation }: ChapterScreenProps) => (
   <ChapterContextProvider
@@ -281,6 +284,41 @@ export const ChapterContent = ({
     void Share.share({ message: chapterUrl });
   }, [chapterUrl]);
 
+  const copyChapterText = useCallback(() => {
+    void (async () => {
+      try {
+        const text = (
+          await getChapterPlainText(novel.pluginId, chapter)
+        ).trim();
+        if (!text) {
+          showToast(getString('readerScreen.copyChapterFailed'));
+          return;
+        }
+        await Clipboard.setStringAsync(text);
+        const words = text.split(/\s+/).length;
+        showToast(
+          getString('readerScreen.copyChapterSuccess', {
+            count: words,
+            minutes: Math.max(1, Math.round(words / 220)),
+          }),
+        );
+      } catch {
+        showToast(getString('readerScreen.copyChapterFailed'));
+      }
+    })();
+  }, [chapter, novel.pluginId]);
+
+  const copyChapterLink = useCallback(() => {
+    if (!chapterUrl) {
+      showToast(getString('readerScreen.copyChapterFailed'));
+      return;
+    }
+    void Clipboard.setStringAsync(chapterUrl).then(
+      () => showToast(getString('readerScreen.copyLinkSuccess')),
+      () => showToast(getString('readerScreen.copyChapterFailed')),
+    );
+  }, [chapterUrl]);
+
   if (error) {
     return (
       <ErrorScreenV2
@@ -338,6 +376,8 @@ export const ChapterContent = ({
             openInWebView={openChapterInWebView}
             openInBrowser={openChapterInBrowser}
             shareChapter={shareChapter}
+            copyChapterText={copyChapterText}
+            copyChapterLink={copyChapterLink}
             showRecap={openRecapModal}
             showAssistant={openAssistant}
           />

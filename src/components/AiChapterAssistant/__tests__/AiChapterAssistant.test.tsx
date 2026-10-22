@@ -13,11 +13,19 @@ import {
   getChapterSummary,
 } from '@database/queries/ChapterAiQueries';
 import { showToast } from '@utils/showToast';
+import { setStringAsync } from 'expo-clipboard';
 
 const mockShowToast = showToast as jest.MockedFunction<typeof showToast>;
+const mockSetStringAsync = setStringAsync as jest.MockedFunction<
+  typeof setStringAsync
+>;
 
 jest.mock('@utils/showToast', () => ({
   showToast: jest.fn(),
+}));
+
+jest.mock('expo-clipboard', () => ({
+  setStringAsync: jest.fn().mockResolvedValue(true),
 }));
 
 jest.mock('@services/ai/chapter', () => ({
@@ -78,6 +86,7 @@ const renderAssistant = (onDismiss = jest.fn()) =>
 describe('AiChapterAssistant', () => {
   beforeEach(() => {
     mockShowToast.mockClear();
+    mockSetStringAsync.mockClear();
     mockSummarizeChapter.mockReset();
     mockAskAboutChapter.mockReset();
     mockGetChapterSummary.mockReset();
@@ -130,6 +139,28 @@ describe('AiChapterAssistant', () => {
     expect(screen.getByText('This chapter does not name him.')).toBeTruthy();
   });
 
+  it('copies the stored summary to the clipboard', async () => {
+    mockGetChapterSummary.mockResolvedValue({
+      id: 1,
+      chapterId: 7,
+      summary: 'The hero reaches the capital.',
+      provider: 'http://10.0.2.2:8765/v1',
+      model: 'mock-model',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+
+    renderAssistant();
+
+    fireEvent.press(await screen.findByLabelText('Copy summary'));
+
+    await waitFor(() =>
+      expect(mockSetStringAsync).toHaveBeenCalledWith(
+        'The hero reaches the capital.',
+      ),
+    );
+    expect(mockShowToast).toHaveBeenCalledWith('Summary copied');
+  });
+
   it('summarizes the chapter through the service', async () => {
     mockSummarizeChapter.mockResolvedValue('A fresh summary.');
 
@@ -148,24 +179,22 @@ describe('AiChapterAssistant', () => {
 
   it('sends a question and renders the answer', async () => {
     mockAskAboutChapter.mockResolvedValue('He is the butler.');
-    mockGetChapterChatMessages
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([
-        {
-          id: 1,
-          chapterId: 7,
-          role: 'user',
-          content: 'who is he?',
-          createdAt: '2026-01-01T00:00:00.000Z',
-        },
-        {
-          id: 2,
-          chapterId: 7,
-          role: 'assistant',
-          content: 'He is the butler.',
-          createdAt: '2026-01-01T00:00:01.000Z',
-        },
-      ]);
+    mockGetChapterChatMessages.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        id: 1,
+        chapterId: 7,
+        role: 'user',
+        content: 'who is he?',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+      {
+        id: 2,
+        chapterId: 7,
+        role: 'assistant',
+        content: 'He is the butler.',
+        createdAt: '2026-01-01T00:00:01.000Z',
+      },
+    ]);
 
     renderAssistant();
     fireEvent.changeText(

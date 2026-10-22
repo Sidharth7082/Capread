@@ -14,6 +14,7 @@
     "clear": "Clear chat",
     "cleared": "Chat cleared",
     "contextLimit": "Long chapters are sent up to their first %{count} characters.",
+    "copySummary": "Copy summary",
     "empty": "Ask anything about this chapter. Answers use only the text you are reading, so they cannot spoil later chapters.",
     "failed": "AI request failed",
     "notConfigured": "Add an AI provider in Settings → AI first.",
@@ -23,6 +24,7 @@
     "summarize": "Summarize this chapter",
     "summarizing": "Summarizing…",
     "summary": "Chapter summary",
+    "summaryCopied": "Summary copied",
     "thinking": "Thinking…",
     "title": "Ask AI"
   },
@@ -748,6 +750,14 @@
       "scrollToCurrentChapter": "Scroll to current chapter",
       "scrollToTop": "Scroll to top"
     },
+    "copyChapter": "Copy chapter text",
+    "copyChapterFailed": "Couldn't copy the chapter",
+    "copyChapterSuccess": {
+      "one": "Chapter copied — %{count} word, ~%{minutes} min read",
+      "other": "Chapter copied — %{count} words, ~%{minutes} min read"
+    },
+    "copyLink": "Copy chapter link",
+    "copyLinkSuccess": "Link copied to clipboard",
     "emptyChapterMessage": "<h2>Chapter couldn't be loaded</h2><p>No readable content was found. Check the chapter in WebView; if it loads there, <a href='%{reportUrl}'>report the plugin issue</a>.</p><p><a href='%{refreshUrl}'>Refresh chapter</a></p><p>Plugin: %{pluginId}<br>Novel: %{novelName}<br>Chapter: %{chapterName}</p>",
     "finished": "Finished",
     "nextChapter": "Next: %{name}",
