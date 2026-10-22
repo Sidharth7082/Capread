@@ -200,13 +200,22 @@ void processImages(
 
 std::filesystem::path localPathFromUri(const std::string& uri) {
   constexpr const char* FILE_SCHEME = "file://";
+  std::string path;
   if (uri.rfind(FILE_SCHEME, 0) == 0) {
-    return percentDecode(uri.substr(7));
+    path = uri.substr(7);
+  } else if (!uri.empty() && uri.front() == '/') {
+    path = uri;
+  } else {
+    return {};
   }
-  if (!uri.empty() && uri.front() == '/') {
-    return percentDecode(uri);
+  // Covers are stored as "file://.../cover.png?<timestamp>" so the image cache
+  // refreshes when a cover is replaced; the query and fragment are not part of
+  // the file name and must be dropped or the file lookup fails.
+  const std::size_t suffixStart = path.find_first_of("?#");
+  if (suffixStart != std::string::npos) {
+    path.erase(suffixStart);
   }
-  return {};
+  return percentDecode(path);
 }
 
 std::string normalizedImageExtension(const std::filesystem::path& path) {

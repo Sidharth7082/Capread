@@ -1,5 +1,6 @@
 #include "../export/EpubExporter.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <filesystem>
@@ -46,11 +47,15 @@ int main(int argc, char** argv) {
   }
 
   const std::filesystem::path outputPath = fixtureDirectory / "fixture.epub";
+  // Covers are stored with a cache-busting "?timestamp"; the exporter must
+  // still find and embed the local file.
+  const std::string coverUri =
+      "file://" + imagePath.string() + "?1712345678";
   const EpubArchiveResult result = exportEpubArchive(
       EpubArchiveMetadata{
           "Fixture & Book",
           "en",
-          "",
+          coverUri,
           "Description",
           "LNReader",
           "urn:lnreader:test",
@@ -88,6 +93,10 @@ int main(int argc, char** argv) {
   const std::string firstName(bytes.begin() + 30,
                               bytes.begin() + 30 + nameLength);
   assert(firstName == "mimetype");
+
+  const std::string coverEntry = "EPUB/images/cover.png";
+  assert(std::search(bytes.begin(), bytes.end(), coverEntry.begin(),
+                     coverEntry.end()) != bytes.end());
 
   return 0;
 }

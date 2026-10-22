@@ -13,6 +13,7 @@ import { NOVEL_STORAGE } from '@utils/Storages';
 import { getString } from '@i18n/translations';
 import { getNovelDownloadedChapters } from '@database/queries/ChapterQueries';
 import { backgroundTasks } from '@services/backgroundTasks';
+import { resolveEpubCoverPath } from '@services/epub/cover';
 
 import ExportEpubModal, { EpubExportOptions } from './ExportEpubModal';
 
@@ -159,7 +160,7 @@ const ExportNovelAsEpubButton: React.FC<ExportNovelAsEpubButtonProps> = ({
           metadata: {
             title: novel.name,
             language: 'en',
-            coverPath: novel.cover || '',
+            coverPath: resolveEpubCoverPath(novel.cover),
             description: novel.summary || '',
             author: novel.author || '',
             bookId: `urn:lnreader:${novel.pluginId}:${novel.id}`,
