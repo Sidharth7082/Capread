@@ -239,6 +239,11 @@ const LibraryScreen = ({ navigation }: LibraryScreenProps) => {
 
   const filteredCounts = useMemo(() => {
     const counts = new Map<number, number>();
+    // Counts are only rendered when enabled; skip the O(categories × novels)
+    // work on every search keystroke otherwise.
+    if (!showNumberOfNovels) {
+      return counts;
+    }
     for (const category of categories) {
       const ids = new Set(category.novelIds);
       counts.set(
@@ -254,7 +259,7 @@ const LibraryScreen = ({ navigation }: LibraryScreenProps) => {
       );
     }
     return counts;
-  }, [categories, library, filterCriteria]);
+  }, [categories, library, filterCriteria, showNumberOfNovels]);
 
   const renderTabBar = useCallback(
     (props: SceneRendererProps & { navigationState: State }) => {
