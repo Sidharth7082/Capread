@@ -152,6 +152,7 @@
           "native-crash-logs",
           "nitro-tts",
           "native-volume-button-listener",
+          "native-cloudflare",
           "native-zip-archive",
           "nitro-epub",
           "native-background-tasks",
