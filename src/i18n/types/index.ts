@@ -28,6 +28,12 @@ export interface StringMap {
   'aiAssistant.summaryCopied': 'string';
   'aiAssistant.thinking': 'string';
   'aiAssistant.title': 'string';
+  'appUpdate.download': 'string';
+  'appUpdate.newVersionAvailable': 'string';
+  'appUpdate.notNow': 'string';
+  'appUpdate.note': 'string';
+  'appUpdate.onVersion': 'string';
+  'appUpdate.whatsNew': 'string';
   'aiSettingsScreen.apiKey': 'string';
   'aiSettingsScreen.autoSave': 'string';
   'aiSettingsScreen.autoSaveDescription': 'string';
