@@ -1,6 +1,6 @@
 {
   "expo": {
-    "version": "2.10.0",
+    "version": "2.10.1",
     "name": "Capread",
     "slug": "capread",
     "scheme": "lnreader",
@@ -56,7 +56,7 @@
       ]
     ],
     "android": {
-      "versionCode": 4214784,
+      "versionCode": 4214785,
       "package": "com.rajarsheechatterjee.LNReader",
       "adaptiveIcon": {
         "foregroundImage": "./assets/native/ic_launcher_foreground.png",
