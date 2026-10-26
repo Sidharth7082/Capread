@@ -28,6 +28,14 @@
     "thinking": "Thinking…",
     "title": "Ask AI"
   },
+  "appUpdate": {
+    "download": "Download",
+    "newVersionAvailable": "New version available!",
+    "notNow": "Not now",
+    "note": "Note",
+    "onVersion": "You're on",
+    "whatsNew": "What's new in"
+  },
   "aiSettingsScreen": {
     "apiKey": "API key",
     "autoSave": "Auto-save",

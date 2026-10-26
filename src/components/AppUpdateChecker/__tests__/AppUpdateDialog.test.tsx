@@ -6,9 +6,13 @@ import AppUpdateDialog from '../AppUpdateDialog';
 jest.mock('@i18n/translations', () => ({
   getString: (key: string) =>
     ({
-      'common.install': 'Install',
-      'common.later': 'Later',
-      'common.newUpdateAvailable': 'New update available',
+      'appUpdate.download': 'Download',
+      'appUpdate.newVersionAvailable': 'New version available!',
+      'appUpdate.notNow': 'Not now',
+      'appUpdate.note': 'Note',
+      'appUpdate.onVersion': "You're on",
+      'appUpdate.whatsNew': "What's new in",
+      'common.ok': 'Ok',
       'common.skipVersion': 'Skip version',
     }[key] ?? key),
 }));
@@ -22,6 +26,7 @@ jest.mock('@hooks/persisted', () => ({
     scrim: '#000000',
     surface: '#fffbfe',
     surfaceContainerHigh: '#ece6f0',
+    surfaceVariant: '#e7e0ec',
   }),
 }));
 
@@ -36,7 +41,7 @@ const release = {
 };
 
 describe('AppUpdateDialog', () => {
-  it('preserves release-note spacing within a content-sized scroll area', () => {
+  it('renders the release notes as formatted blocks', () => {
     render(
       <AppUpdateDialog
         release={release}
@@ -45,7 +50,12 @@ describe('AppUpdateDialog', () => {
       />,
     );
 
-    expect(screen.getByText('## Changes\n- First\n- Second')).toBeTruthy();
+    expect(screen.getByText('New version available!')).toBeTruthy();
+    expect(screen.getByText('v9.0.0')).toBeTruthy();
+    expect(screen.getByText(/You're on v\d/)).toBeTruthy();
+    expect(screen.getByText('Changes')).toBeTruthy();
+    expect(screen.getByText('First')).toBeTruthy();
+    expect(screen.getByText('Second')).toBeTruthy();
     expect(screen.getByTestId('app-update-release-notes').props.style).toEqual({
       maxHeight: expect.any(Number),
     });
@@ -54,11 +64,29 @@ describe('AppUpdateDialog', () => {
         .contentContainerStyle,
     ).toEqual({
       paddingHorizontal: 24,
-      paddingVertical: 16,
+      paddingVertical: 8,
     });
   });
 
-  it('exposes dismiss, skip, and install actions', () => {
+  it('renders note callouts from GitHub admonitions', () => {
+    render(
+      <AppUpdateDialog
+        release={{
+          ...release,
+          body: '> [!NOTE]\n> Backup format changes next version.',
+        }}
+        onDismiss={jest.fn()}
+        onIgnore={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Note')).toBeTruthy();
+    expect(
+      screen.getByText('Backup format changes next version.'),
+    ).toBeTruthy();
+  });
+
+  it('exposes dismiss, skip, and download actions', () => {
     const onDismiss = jest.fn();
     const onIgnore = jest.fn();
 
@@ -70,9 +98,9 @@ describe('AppUpdateDialog', () => {
       />,
     );
 
-    fireEvent.press(screen.getByText('Later'));
+    fireEvent.press(screen.getByText('Not now'));
     fireEvent.press(screen.getByText('Skip version'));
-    fireEvent.press(screen.getByText('Install'));
+    fireEvent.press(screen.getByText('Download'));
 
     expect(onDismiss).toHaveBeenCalledTimes(1);
     expect(onIgnore).toHaveBeenCalledTimes(1);

@@ -88,4 +88,59 @@ describe('useAppUpdateChecker', () => {
 
     await waitFor(() => expect(result.current.isNewVersion).toBe(true));
   });
+
+  describe("what's new after updating", () => {
+    const installedVersion: string = require('../../../../package.json').version;
+
+    const mockStorage = (entries: Record<string, string>) =>
+      jest.mocked(MMKVStorage.getString).mockImplementation(key =>
+        entries[key],
+      );
+
+    it('exposes cached notes once for the running version', async () => {
+      mockStorage({
+        LAST_SEEN_VERSION: '0.0.1',
+        CACHED_LATEST_RELEASE: JSON.stringify({
+          tag_name: `v${installedVersion}`,
+          body: 'Notes',
+        }),
+      });
+      mockFetchRelease();
+
+      const { result } = renderHook(useAppUpdateChecker);
+
+      expect(result.current.whatsNewRelease?.body).toBe('Notes');
+
+      act(() => result.current.dismissWhatsNew());
+
+      expect(MMKVStorage.set).toHaveBeenCalledWith(
+        'LAST_SEEN_VERSION',
+        installedVersion,
+      );
+      expect(result.current.whatsNewRelease).toBeUndefined();
+    });
+
+    it('does not show notes on a fresh install', async () => {
+      mockFetchRelease();
+
+      const { result } = renderHook(useAppUpdateChecker);
+
+      expect(result.current.whatsNewRelease).toBeUndefined();
+    });
+
+    it('ignores notes cached for a different version', async () => {
+      mockStorage({
+        LAST_SEEN_VERSION: '0.0.1',
+        CACHED_LATEST_RELEASE: JSON.stringify({
+          tag_name: 'v0.0.2',
+          body: 'Old notes',
+        }),
+      });
+      mockFetchRelease();
+
+      const { result } = renderHook(useAppUpdateChecker);
+
+      expect(result.current.whatsNewRelease).toBeUndefined();
+    });
+  });
 });

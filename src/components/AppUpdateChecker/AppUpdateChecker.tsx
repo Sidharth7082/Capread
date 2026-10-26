@@ -1,10 +1,17 @@
 import { useCallback, useState } from 'react';
 
 import AppUpdateDialog from './AppUpdateDialog';
+import WhatsNewDialog from './WhatsNewDialog';
 import { useAppUpdateChecker } from './useAppUpdateChecker';
 
 const AppUpdateChecker = () => {
-  const { ignoreVersion, isNewVersion, latestRelease } = useAppUpdateChecker();
+  const {
+    dismissWhatsNew,
+    ignoreVersion,
+    isNewVersion,
+    latestRelease,
+    whatsNewRelease,
+  } = useAppUpdateChecker();
   const [dismissedVersion, setDismissedVersion] = useState<string>();
 
   const versionTag = latestRelease?.tag_name;
@@ -18,6 +25,13 @@ const AppUpdateChecker = () => {
       ignoreVersion(versionTag);
     }
   }, [ignoreVersion, versionTag]);
+
+  // Right after installing, show what changed in the running version first.
+  if (whatsNewRelease) {
+    return (
+      <WhatsNewDialog release={whatsNewRelease} onClose={dismissWhatsNew} />
+    );
+  }
 
   if (
     !isNewVersion ||

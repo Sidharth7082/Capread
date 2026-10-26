@@ -25,7 +25,19 @@ jest.mock('../AppUpdateDialog', () => {
   };
 });
 
+jest.mock('../WhatsNewDialog', () => {
+  const React = jest.requireActual<typeof import('react')>('react');
+
+  return function MockWhatsNewDialog({ onClose }: { onClose: () => void }) {
+    return React.createElement('View', {
+      onClose,
+      testID: 'app-whats-new-dialog',
+    });
+  };
+});
+
 const mockIgnoreVersion = jest.fn();
+const mockDismissWhatsNew = jest.fn();
 const mockAppRelease = {
   tag_name: 'v9.0.0',
   body: 'Release notes',
@@ -35,17 +47,39 @@ const mockAppRelease = {
 describe('AppUpdateChecker', () => {
   beforeEach(() => {
     jest.mocked(useAppUpdateChecker).mockReturnValue({
+      dismissWhatsNew: mockDismissWhatsNew,
       ignoreVersion: mockIgnoreVersion,
       isNewVersion: true,
       latestRelease: mockAppRelease,
+      whatsNewRelease: undefined,
     });
+  });
+
+  it('shows what is new after installing before offering another update', () => {
+    jest.mocked(useAppUpdateChecker).mockReturnValue({
+      dismissWhatsNew: mockDismissWhatsNew,
+      ignoreVersion: mockIgnoreVersion,
+      isNewVersion: true,
+      latestRelease: mockAppRelease,
+      whatsNewRelease: mockAppRelease,
+    });
+
+    render(<AppUpdateChecker />);
+
+    expect(screen.getByTestId('app-whats-new-dialog')).toBeTruthy();
+    expect(screen.queryByTestId('app-update-dialog')).toBeNull();
+
+    act(() => screen.getByTestId('app-whats-new-dialog').props.onClose());
+    expect(mockDismissWhatsNew).toHaveBeenCalledTimes(1);
   });
 
   it('renders nothing when no update is available', () => {
     jest.mocked(useAppUpdateChecker).mockReturnValue({
+      dismissWhatsNew: mockDismissWhatsNew,
       ignoreVersion: mockIgnoreVersion,
       isNewVersion: false,
       latestRelease: undefined,
+      whatsNewRelease: undefined,
     });
 
     render(<AppUpdateChecker />);
