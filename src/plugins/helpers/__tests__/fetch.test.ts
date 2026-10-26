@@ -170,6 +170,32 @@ describe('fetchApi Cloudflare bypass', () => {
   });
 });
 
+describe('fetchApi request timeout', () => {
+  it('aborts a request that never settles instead of hanging forever', async () => {
+    jest.useFakeTimers();
+    try {
+      fetchMock.mockImplementation(
+        (_url: string, init: { signal?: AbortSignal }) =>
+          new Promise((_resolve, reject) => {
+            init.signal?.addEventListener('abort', () =>
+              reject(new Error('Aborted')),
+            );
+          }),
+      );
+      const request = loadFetchApi()('https://dead.test/novel');
+
+      jest.advanceTimersByTime(60_000);
+      await expect(request).rejects.toThrow('Aborted');
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock.mock.calls[0][1].signal.aborted).toBe(true);
+      expect(solveChallenge).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
+
 describe('fetchText Cloudflare bypass', () => {
   const originalFileReader = global.FileReader;
   beforeAll(() => {

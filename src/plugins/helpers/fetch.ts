@@ -51,19 +51,33 @@ const getUserAgentHeader = (headers: FetchInit['headers']) => {
     .pop()?.[1];
 };
 
+// React Native's fetch has no usable default timeout, and a request to a dead
+// host can hang until the OS gives up (over a minute in practice). Without a
+// cap, one unresponsive source stalls the whole library update it belongs to.
+const REQUEST_TIMEOUT_MS = 60_000;
+
+const fetchWithTimeout = (url: string, init: FetchInit): Promise<Response> => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  return fetch(url, {
+    ...init,
+    signal: controller.signal,
+  } as unknown as RequestInit).finally(() => clearTimeout(timer));
+};
+
 /**
  * On a Cloudflare challenge, clears it in a hidden WebView and retries once.
  * If it cannot be cleared the challenge response is returned unchanged, so
  * plugins keep reporting it and the user can still solve it in the WebView.
  */
 const fetchWithCloudflareBypass = async (url: string, init: FetchInit) => {
-  const response = await fetch(url, init);
+  const response = await fetchWithTimeout(url, init);
   if (!isCloudflareChallenge(response)) {
     return response;
   }
   const userAgent = getUserAgentHeader(init.headers) || getUserAgent();
   if (await solveCloudflareChallenge(url, userAgent)) {
-    return fetch(url, init);
+    return fetchWithTimeout(url, init);
   }
   return response;
 };
