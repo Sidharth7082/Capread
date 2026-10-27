@@ -66,6 +66,7 @@ export const initialChapterGeneralSettings = {
   bionicReading: false,
   tapToScroll: false,
   TTSEnable: true,
+  infiniteScroll: false,
 };
 
 export const initialChapterReaderSettings = {
