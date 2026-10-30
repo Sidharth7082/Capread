@@ -17,10 +17,12 @@ const mockNovel = {
   isLocal: false,
 };
 
+let mockIsLocal = false;
+
 jest.mock('../../ChapterContext', () => ({
   useChapterContext: () => ({
     chapter: mockChapter,
-    novel: mockNovel,
+    novel: { ...mockNovel, isLocal: mockIsLocal },
     refetch: jest.fn(),
   }),
 }));
@@ -120,6 +122,7 @@ const renderAppbar = () =>
 
 describe('ReaderAppbar', () => {
   beforeEach(() => {
+    mockIsLocal = false;
     mockCopyChapterText.mockClear();
     mockCopyChapterLink.mockClear();
     mockShareChapter.mockClear();
@@ -140,5 +143,22 @@ describe('ReaderAppbar', () => {
     expect(mockCopyChapterLink).toHaveBeenCalledTimes(1);
 
     expect(mockShareChapter).not.toHaveBeenCalled();
+  });
+
+  it('keeps the AI entries for local EPUBs and hides URL-only actions', () => {
+    mockIsLocal = true;
+    renderAppbar();
+
+    fireEvent.press(screen.getByTestId('icon-dots-vertical'));
+
+    expect(screen.getByTestId('menu-recapScreen.title')).toBeTruthy();
+    expect(screen.getByTestId('menu-aiAssistant.title')).toBeTruthy();
+    expect(screen.getByTestId('menu-readerScreen.copyChapter')).toBeTruthy();
+
+    expect(screen.queryByTestId('menu-readerScreen.copyLink')).toBeNull();
+    expect(screen.queryByTestId('menu-webview.refresh')).toBeNull();
+    expect(screen.queryByTestId('menu-webview.openInWebView')).toBeNull();
+    expect(screen.queryByTestId('menu-webview.openInBrowser')).toBeNull();
+    expect(screen.queryByTestId('menu-webview.share')).toBeNull();
   });
 });

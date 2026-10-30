@@ -160,7 +160,7 @@ const ReaderAppbar = ({
           color={bookmarked ? theme.primary : theme.onSurface}
           theme={theme}
         />
-        {!novel.isLocal ? (
+        {
           <Menu
             visible={menuVisible}
             onDismiss={() => setMenuVisible(false)}
@@ -188,28 +188,33 @@ const ReaderAppbar = ({
               title={getString('readerScreen.copyChapter')}
               onPress={() => runMenuAction(copyChapterText)}
             />
-            <Menu.Item
-              title={getString('readerScreen.copyLink')}
-              onPress={() => runMenuAction(copyChapterLink)}
-            />
-            <Menu.Item
-              title={getString('webview.refresh')}
-              onPress={() => runMenuAction(refetch)}
-            />
-            <Menu.Item
-              title={getString('webview.openInWebView')}
-              onPress={() => runMenuAction(openInWebView)}
-            />
-            <Menu.Item
-              title={getString('webview.openInBrowser')}
-              onPress={() => runMenuAction(openInBrowser)}
-            />
-            <Menu.Item
-              title={getString('webview.share')}
-              onPress={() => runMenuAction(shareChapter)}
-            />
+            {/* Imported EPUBs have no source URL or plugin to refresh. */}
+            {!novel.isLocal ? (
+              <>
+                <Menu.Item
+                  title={getString('readerScreen.copyLink')}
+                  onPress={() => runMenuAction(copyChapterLink)}
+                />
+                <Menu.Item
+                  title={getString('webview.refresh')}
+                  onPress={() => runMenuAction(refetch)}
+                />
+                <Menu.Item
+                  title={getString('webview.openInWebView')}
+                  onPress={() => runMenuAction(openInWebView)}
+                />
+                <Menu.Item
+                  title={getString('webview.openInBrowser')}
+                  onPress={() => runMenuAction(openInBrowser)}
+                />
+                <Menu.Item
+                  title={getString('webview.share')}
+                  onPress={() => runMenuAction(shareChapter)}
+                />
+              </>
+            ) : null}
           </Menu>
-        ) : null}
+        }
       </View>
       {searchVisible ? (
         <ReaderSearchbar
